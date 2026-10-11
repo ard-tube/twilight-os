@@ -1,0 +1,61 @@
+name: Build Twilight OS ISO
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    permissions:
+      contents: write
+    steps:
+      - name: Install build tools
+        run: pacman -Syu --noconfirm archiso git
+
+      - uses: actions/checkout@v4
+
+      - name: Prepare profile from Arch releng
+        run: |
+          cp -r /usr/share/archiso/configs/releng profile
+          # Rename the ISO
+          sed -i 's/^iso_name=.*/iso_name="twilight-os"/' profile/profiledef.sh
+          sed -i 's/^iso_label=.*/iso_label="TWILIGHT_$(date +%Y%m)"/' profile/profiledef.sh
+          sed -i 's/^iso_publisher=.*/iso_publisher="Twilight OS"/' profile/profiledef.sh
+          sed -i 's/^iso_application=.*/iso_application="Twilight OS Live\/Rescue"/' profile/profiledef.sh
+          # Add KDE packages
+          cat overlay/packages.extra >> profile/packages.x86_64
+          # Copy our config files
+          cp -r overlay/airootfs/. profile/airootfs/
+          # Live user
+          echo 'liveuser:x:1000:1000::/home/liveuser:/bin/bash' >> profile/airootfs/etc/passwd
+          echo 'liveuser::14871::::::' >> profile/airootfs/etc/shadow
+          echo 'liveuser:x:1000:' >> profile/airootfs/etc/group
+          echo 'liveuser:!::' >> profile/airootfs/etc/gshadow
+          mkdir -p profile/airootfs/home/liveuser
+          sed -i '/^file_permissions=(/a\  ["/home/liveuser"]="1000:1000:750"' profile/profiledef.sh
+          # Boot into KDE (SDDM) and enable networking
+          mkdir -p profile/airootfs/etc/systemd/system/multi-user.target.wants
+          ln -sf /usr/lib/systemd/system/sddm.service profile/airootfs/etc/systemd/system/display-manager.service
+          ln -sf /usr/lib/systemd/system/graphical.target profile/airootfs/etc/systemd/system/default.target
+          ln -sf /usr/lib/systemd/system/NetworkManager.service profile/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service
+
+      - name: Build ISO
+        run: mkarchiso -v -w /tmp/archiso-work -o out profile
+
+      - name: Upload ISO as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: twilight-os-iso
+          path: out/*.iso
+
+      - name: Publish GitHub release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*.iso
+          prerelease: true
