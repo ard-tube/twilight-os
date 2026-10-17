@@ -141,4 +141,5 @@ docker run --privileged --rm -v $(pwd):/repo -w /repo archlinux:latest bash -c "
 - **Founder & Maintainer**: [Arda](https://github.com/ard-tube)
 - **Base Distribution**: [Arch Linux](https://archlinux.org) (`archiso` releng profile)
 - **Desktop Environment**: [KDE Plasma](https://kde.org)
+- **Default Artwork**: 5K Twilight Horizon by [xyproto](https://github.com/xyproto) (Alexander F. Rødseth, Arch Linux Package Maintainer), licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) (Public Domain).
 - **License**: GNU General Public License v3.0 ([GPL-3.0](LICENSE))
