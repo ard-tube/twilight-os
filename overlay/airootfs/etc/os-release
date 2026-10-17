@@ -1,0 +1,10 @@
+NAME="Twilight OS"
+PRETTY_NAME="Twilight OS"
+ID=twilight
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;138;43;226"
+HOME_URL="https://github.com/ard-tube/twilight-os"
+SUPPORT_URL="https://github.com/ard-tube/twilight-os/issues"
+BUG_REPORT_URL="https://github.com/ard-tube/twilight-os/issues"
+LOGO=twilight-os

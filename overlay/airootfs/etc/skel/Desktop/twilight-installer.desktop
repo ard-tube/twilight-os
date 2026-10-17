@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install Twilight OS
+GenericName=System Installer
+Comment=Install Twilight OS to your hard drive or SSD
+Exec=/usr/local/bin/twilight-installer
+Icon=system-software-install
+Terminal=false
+StartupNotify=true
+Categories=System;
+X-KDE-Authorized-Exec=true

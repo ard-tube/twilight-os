@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Twilight OS Terminal / TUI Installer
+set -e
+
+# Colors
+PURPLE='\033[0;35m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+clear
+echo -e "${PURPLE}"
+if [[ -f /usr/share/twilight/ascii-logo.txt ]]; then
+    cat /usr/share/twilight/ascii-logo.txt
+else
+    echo "======================================================"
+    echo "                  TWILIGHT OS                         "
+    echo "======================================================"
+fi
+echo -e "${NC}"
+echo -e "${CYAN}Welcome to the Twilight OS Terminal Setup Assistant!${NC}"
+echo "--------------------------------------------------------"
+echo "1) Start Guided Installation (archinstall)"
+echo "2) Manage Partitions (cfdisk)"
+echo "3) Software Suite Selection"
+echo "4) Launch Graphical Installer (GUI)"
+echo "5) Exit to Shell"
+echo "--------------------------------------------------------"
+
+read -rp "Select an option [1-5]: " choice
+
+case "$choice" in
+    1)
+        echo -e "${GREEN}Starting Twilight OS guided installation...${NC}"
+        exec archinstall
+        ;;
+    2)
+        echo "Available disks:"
+        lsblk -d -n -o NAME,SIZE,MODEL
+        read -rp "Enter disk name (e.g., sda or nvme0n1): " dsk
+        cfdisk "/dev/$dsk"
+        exec /usr/local/bin/twilight-installer-cli
+        ;;
+    3)
+        if command -v whiptail >/dev/null 2>&1; then
+            CHOICES=$(whiptail --title "Twilight OS Software Suites" --checklist \
+            "Choose additional software packs to install:" 18 65 6 \
+            "OFFICE" "LibreOffice, Obsidian, Okular" ON \
+            "MEDIA" "VLC, MPV, OBS Studio, GIMP" ON \
+            "GAMING" "Steam, Lutris, MangoHud, Wine" ON \
+            "WEB" "Firefox, Chromium, Telegram" ON \
+            "UTILS" "Timeshift, GParted, Btop" ON \
+            "NVIDIA" "Universal NVIDIA Open Drivers" ON 3>&1 1>&2 2>&3)
+            echo "Selected packages: $CHOICES"
+            read -rp "Press Enter to start installation with selected packs..."
+            exec archinstall
+        else
+            echo "Whiptail not found, launching standard installer..."
+            exec archinstall
+        fi
+        ;;
+    4)
+        if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+            exec /usr/local/bin/twilight-installer-gui
+        else
+            echo -e "${RED}No graphical display server detected. Running terminal installer instead.${NC}"
+            exec archinstall
+        fi
+        ;;
+    5)
+        echo "Exiting to shell. Type 'twilight-installer' anytime to restart."
+        exit 0
+        ;;
+    *)
+        echo "Invalid selection. Exiting."
+        exit 1
+        ;;
+esac

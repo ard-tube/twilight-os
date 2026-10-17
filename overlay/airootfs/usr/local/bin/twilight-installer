@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Twilight OS Installer Master Launcher
+set -e
+
+# If --cli flag is given, force CLI
+if [[ "$1" == "--cli" || "$1" == "-c" ]]; then
+    exec /usr/local/bin/twilight-installer-cli
+fi
+
+# If GUI environment exists, launch PyQt6 installer
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]] && command -v python3 >/dev/null 2>&1; then
+    exec /usr/local/bin/twilight-installer-gui
+else
+    exec /usr/local/bin/twilight-installer-cli
+fi

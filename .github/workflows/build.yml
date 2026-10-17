@@ -22,23 +22,55 @@ jobs:
       - name: Prepare profile from Arch releng
         run: |
           cp -r /usr/share/archiso/configs/releng profile
-          # Rename the ISO
+
+          # 1. Enable multilib repository in pacman.conf
+          sed -i "/\[multilib\]/,/Include/"'s/^#//' profile/pacman.conf
+
+          # 2. Branding: Rename ISO & bootloader entries
           sed -i 's/^iso_name=.*/iso_name="twilight-os"/' profile/profiledef.sh
           sed -i 's/^iso_label=.*/iso_label="TWILIGHT_$(date +%Y%m)"/' profile/profiledef.sh
-          sed -i 's/^iso_publisher=.*/iso_publisher="Twilight OS"/' profile/profiledef.sh
-          sed -i 's/^iso_application=.*/iso_application="Twilight OS Live\/Rescue"/' profile/profiledef.sh
-          # Add KDE packages
+          sed -i 's/^iso_publisher=.*/iso_publisher="Twilight OS <https:\/\/github.com\/ard-tube\/twilight-os>"/' profile/profiledef.sh
+          sed -i 's/^iso_application=.*/iso_application="Twilight OS Live Environment"/' profile/profiledef.sh
+
+          find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux install medium/Twilight OS/g' {} + 2>/dev/null || true
+          find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux/Twilight OS/g' {} + 2>/dev/null || true
+
+          # 3. Add extra packages
           cat overlay/packages.extra >> profile/packages.x86_64
-          # Copy our config files
+
+          # 4. Copy our overlay files (configs, wallpapers, branding, installers)
           cp -r overlay/airootfs/. profile/airootfs/
-          # Live user
-          echo 'liveuser:x:1000:1000::/home/liveuser:/bin/bash' >> profile/airootfs/etc/passwd
+          chmod +x profile/airootfs/usr/local/bin/* 2>/dev/null || true
+
+          # 5. User setup: liveuser with wheel & hardware groups
+          echo 'liveuser:x:1000:1000:Twilight OS Live User:/home/liveuser:/bin/bash' >> profile/airootfs/etc/passwd
           echo 'liveuser::14871::::::' >> profile/airootfs/etc/shadow
           echo 'liveuser:x:1000:' >> profile/airootfs/etc/group
           echo 'liveuser:!::' >> profile/airootfs/etc/gshadow
+
+          for grp in wheel audio video storage optical input power network; do
+            sed -i "/^${grp}:/ s/$/,liveuser/" profile/airootfs/etc/group
+            sed -i "/^${grp}:/ s/$/,liveuser/" profile/airootfs/etc/gshadow 2>/dev/null || true
+            sed -i "s/:,liveuser/:liveuser/" profile/airootfs/etc/group
+            sed -i "s/:,liveuser/:liveuser/" profile/airootfs/etc/gshadow 2>/dev/null || true
+          done
+
+          # 6. Sudoers: NOPASSWD for wheel and liveuser
+          mkdir -p profile/airootfs/etc/sudoers.d
+          echo 'liveuser ALL=(ALL:ALL) NOPASSWD: ALL' > profile/airootfs/etc/sudoers.d/liveuser
+          echo '%wheel ALL=(ALL:ALL) NOPASSWD: ALL' >> profile/airootfs/etc/sudoers.d/liveuser
+          chmod 0440 profile/airootfs/etc/sudoers.d/liveuser
+
+          # 7. Copy /etc/skel to /home/liveuser and set ownership
           mkdir -p profile/airootfs/home/liveuser
-          sed -i '/^file_permissions=(/a\  ["/home/liveuser"]="1000:1000:750"' profile/profiledef.sh
-          # Boot into KDE (SDDM) and enable networking
+          cp -r profile/airootfs/etc/skel/. profile/airootfs/home/liveuser/
+          chown -R 1000:1000 profile/airootfs/home/liveuser
+          chmod +x profile/airootfs/home/liveuser/Desktop/*.desktop 2>/dev/null || true
+
+          # 8. Register permissions in profiledef.sh
+          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"' profile/profiledef.sh
+
+          # 9. Services: SDDM & NetworkManager
           mkdir -p profile/airootfs/etc/systemd/system/multi-user.target.wants
           ln -sf /usr/lib/systemd/system/sddm.service profile/airootfs/etc/systemd/system/display-manager.service
           ln -sf /usr/lib/systemd/system/graphical.target profile/airootfs/etc/systemd/system/default.target
