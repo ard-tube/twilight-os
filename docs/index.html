@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twilight OS — Modern Arch Linux with KDE Plasma 6</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Twilight OS is an elegant, high-performance Arch Linux based operating system featuring KDE Plasma 6, universal GPU drivers, dual GUI/CLI installers, and 50 curated desktop apps.">
+    <meta name="keywords" content="Twilight OS, Arch Linux, KDE Plasma 6, Linux Distro, Gaming Linux, Wayland, NVIDIA Drivers, Calamares, Archiso, Arda">
+    <meta name="author" content="Arda">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ard-tube.github.io/twilight-os/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ard-tube.github.io/twilight-os/">
+    <meta property="og:title" content="Twilight OS — Modern Arch Linux with KDE Plasma 6">
+    <meta property="og:description" content="Experience bleeding-edge performance with refined elegance. KDE Plasma 6 on Wayland, universal NVIDIA & AMD drivers, and 50 essential applications out-of-the-box.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/ard-tube/twilight-os/main/docs/assets/wallpaper.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ard-tube.github.io/twilight-os/">
+    <meta name="twitter:title" content="Twilight OS — Modern Arch Linux with KDE Plasma 6">
+    <meta name="twitter:description" content="Experience bleeding-edge performance with refined elegance. KDE Plasma 6 on Wayland with universal graphics drivers.">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/ard-tube/twilight-os/main/docs/assets/wallpaper.png">
+
+    <!-- Schema.org SoftwareApplication Structured Data for Google Search -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Twilight OS",
+      "operatingSystem": "Linux (Arch Linux based)",
+      "applicationCategory": "OperatingSystem",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "An elegant, high-performance Arch Linux distribution with KDE Plasma 6 desktop and universal GPU support.",
+      "author": {
+        "@type": "Person",
+        "name": "Arda",
+        "url": "https://github.com/ard-tube"
+      },
+      "downloadUrl": "https://github.com/ard-tube/twilight-os/releases"
+    }
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌌</text></svg>">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand">
+                <span class="brand-icon">🌌</span>
+                <span class="brand-name">Twilight <span class="highlight">OS</span></span>
+            </a>
+            <nav class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#applications">50 Apps</a>
+                <a href="#showcase">Showcase</a>
+                <a href="#status">Live Status</a>
+                <a href="https://github.com/ard-tube/twilight-os" target="_blank" class="github-link">
+                    <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    GitHub
+                </a>
+                <a href="#download" class="btn-nav">Download ISO</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-glow"></div>
+        <div class="container hero-content">
+            <div class="badge-pill">✨ Twilight OS Rolling Release • KDE Plasma 6 (Wayland)</div>
+            <h1 class="hero-title">Bleeding-Edge Power.<br><span class="gradient-text">Refined Simplicity.</span></h1>
+            <p class="hero-subtitle">
+                An Arch Linux based operating system tuned for speed, creators, and gamers.
+                Packed with universal GPU drivers, dual GUI & CLI installers, and 50 curated essential apps out-of-the-box.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary" id="heroDownloadBtn">
+                    <span class="btn-icon">⬇</span>
+                    <span>Download Twilight OS</span>
+                </a>
+                <a href="https://github.com/ard-tube/twilight-os" target="_blank" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+
+            <!-- Live Status Ribbon -->
+            <div class="status-ribbon" id="status">
+                <div class="status-item">
+                    <span class="status-dot online"></span>
+                    <span class="status-label">CI Build:</span>
+                    <span class="status-val" id="ciStatus">Automated (GitHub Actions)</span>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-label">Base:</span>
+                    <span class="status-val">Arch Linux x86_64</span>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-label">Desktop:</span>
+                    <span class="status-val">KDE Plasma 6 (Wayland)</span>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-label">Latest ISO:</span>
+                    <span class="status-val" id="isoSize">~2.3 GB</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Wallpaper Showcase -->
+    <section class="showcase-section" id="showcase">
+        <div class="container">
+            <div class="showcase-card">
+                <img src="assets/wallpaper.png" alt="Twilight OS 5K Wallpaper" class="showcase-img">
+                <div class="showcase-overlay">
+                    <span class="showcase-tag">Native 5K Artwork</span>
+                    <h3>Official Twilight Horizon Theme</h3>
+                    <p>Included as the default wallpaper for the desktop, KDE lock screen, and SDDM login greeter.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Features -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Designed for High Performance</h2>
+                <p>Everything you love about Arch Linux, configured for maximum productivity from the first boot.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>KDE Plasma 6 (Wayland)</h3>
+                    <p>Modern fractional scaling, HDR readiness, fluid animations, and gesture support powered by KWin.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Universal GPU Drivers</h3>
+                    <p>Pre-packaged with <code>nvidia-open</code>, userspace utilities, <code>vulkan-radeon</code>, and Intel media drivers.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Dual Installers (GUI + CLI)</h3>
+                    <p>Our custom Qt6 graphical installer and lightweight terminal TUI installer make disk setup seamless.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>50 Curated Applications</h3>
+                    <p>Choose from 5 organized software suites for office, media, gaming, web browsing, and system administration.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌌</div>
+                    <h3>Twilight OS Identity</h3>
+                    <p>Custom Night Horizon Fastfetch terminal art, unified branding in system settings, and passwordless sudo live session.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Rolling & Secure</h3>
+                    <p>Direct access to Arch Linux official repositories and Flatpak support for sandboxed proprietary software.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 50 Curated Applications Explorer -->
+    <section class="apps-section" id="applications">
+        <div class="container">
+            <div class="section-header">
+                <h2>The 50 Essential Applications</h2>
+                <p>Selected and configured for Twilight OS. Installable with a single click in the Twilight Setup Assistant.</p>
+            </div>
+
+            <div class="apps-tabs">
+                <button class="app-tab active" onclick="showCategory('office')">📝 Office & Productivity</button>
+                <button class="app-tab" onclick="showCategory('media')">🎨 Media & Creative</button>
+                <button class="app-tab" onclick="showCategory('gaming')">🎮 Gaming & Performance</button>
+                <button class="app-tab" onclick="showCategory('web')">🌐 Web & Messaging</button>
+                <button class="app-tab" onclick="showCategory('utilities')">🛠️ System Utilities</button>
+            </div>
+
+            <div class="apps-container" id="appsContainer">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="download-section" id="download">
+        <div class="container">
+            <div class="download-card">
+                <h2>Get Twilight OS Today</h2>
+                <p>Download the latest official ISO image and flash it to a USB drive using Ventoy, Rufus, or <code>dd</code>.</p>
+                
+                <div class="download-grid">
+                    <div class="download-option">
+                        <h3>Latest Release ISO</h3>
+                        <p>Stable, tested releases published with version tags.</p>
+                        <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary">Releases on GitHub</a>
+                    </div>
+                    <div class="download-option">
+                        <h3>Automated CI Artifact</h3>
+                        <p>Latest build produced by our continuous integration pipeline.</p>
+                        <a href="https://github.com/ard-tube/twilight-os/actions" class="btn btn-secondary">GitHub Actions Builds</a>
+                    </div>
+                </div>
+
+                <div class="cli-box">
+                    <span class="cli-comment"># Flash to USB via terminal</span>
+                    <code>sudo dd bs=4M if=twilight-os-*.iso of=/dev/sdX status=progress oflag=sync</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-left">
+                <span class="brand-icon">🌌</span>
+                <span>Twilight OS — Crafted by <a href="https://github.com/ard-tube" target="_blank">Arda</a></span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/ard-tube/twilight-os">GitHub Repo</a>
+                <a href="https://github.com/ard-tube/twilight-os/issues">Issues</a>
+                <a href="https://github.com/ard-tube/twilight-os/blob/main/LICENSE">License (GPL-3.0)</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
