@@ -102,6 +102,24 @@ Once booted into the Twilight OS live environment:
 
 ---
 
+## 🖥️ Running in Virtual Machines (Windows & macOS)
+
+You can run Twilight OS inside a virtual machine without touching your physical hard drive partitions:
+
+### 🪟 Windows (Oracle VirtualBox & VMware)
+1. **Create VM**: Choose Type: `Linux`, Version: `Arch Linux (64-bit)`.
+2. **RAM & CPU**: Allocate at least **4096 MB (4 GB)** RAM and **2 to 4 CPU cores**.
+3. **Enable EFI** *(Essential for KDE Plasma 6 Wayland)*: 
+   - VirtualBox: `Settings` → `System` → `Motherboard` → Check **"Enable EFI (special OSes only)"**.
+4. **Display**: Under `Display`, set **Video Memory** to `128 MB`, enable **3D Acceleration**, and set Graphics Controller to **`VMSVGA`**.
+5. **Attach ISO**: Mount `twilight-os-*.iso` in the Storage Optical Drive and start!
+
+### 🍎 macOS (Apple Silicon & Intel Macs)
+- **Apple Silicon (M1 / M2 / M3 / M4)**: Download free [UTM](https://mac.getutm.app/). Click **+**, select **Emulate**, choose **Linux**, allocate 4 GB RAM + 4 CPU cores, and attach the ISO.
+- **Intel Macs**: Use **VirtualBox** or **VMware Fusion** with EFI enabled and 3D Acceleration as described above.
+
+---
+
 ## ⚙️ System Requirements
 
 | Specification | Minimum | Recommended |

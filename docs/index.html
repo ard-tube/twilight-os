@@ -64,6 +64,7 @@
             <nav class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#applications">50 Apps</a>
+                <a href="#vm-guide">VM Guide</a>
                 <a href="#showcase">Showcase</a>
                 <a href="#status">Live Status</a>
                 <a href="https://github.com/ard-tube/twilight-os" target="_blank" class="github-link">
@@ -205,6 +206,58 @@
 
             <div class="apps-container" id="appsContainer">
                 <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Virtual Machine (VM) Support Guide -->
+    <section class="vm-section" id="vm-guide">
+        <div class="container">
+            <div class="section-header">
+                <h2>🖥️ Virtual Machine Support</h2>
+                <p>Run Twilight OS directly inside Windows or macOS without modifying your physical disk partitions.</p>
+            </div>
+
+            <div class="vm-grid">
+                <!-- Windows Card -->
+                <div class="vm-card">
+                    <div class="vm-card-header">
+                        <span class="vm-badge">Windows / Linux</span>
+                        <h3>Oracle VirtualBox & VMware</h3>
+                    </div>
+                    <p class="vm-desc">Ideal for testing Twilight OS safely inside Windows 10/11 or Ubuntu.</p>
+                    <ul class="vm-specs">
+                        <li><strong>OS Type:</strong> Linux → Arch Linux (64-bit)</li>
+                        <li><strong>Base Memory:</strong> 4096 MB (4 GB) or more</li>
+                        <li><strong>Processors:</strong> 2 to 4 CPU Cores</li>
+                        <li><strong>Enable EFI:</strong> <span class="badge-accent">Required</span> System → Motherboard → Check <em>"Enable EFI"</em></li>
+                        <li><strong>Graphics:</strong> Display → 128 MB VRAM + Check <em>"Enable 3D Acceleration"</em></li>
+                        <li><strong>Virtual Disk:</strong> 25 GB+ (VDI / Dynamic)</li>
+                    </ul>
+                    <div class="vm-tip">
+                        💡 <strong>Tip:</strong> In VirtualBox, set Graphics Controller to <code>VMSVGA</code> for smooth KDE Plasma 6 Wayland rendering.
+                    </div>
+                </div>
+
+                <!-- macOS Card -->
+                <div class="vm-card">
+                    <div class="vm-card-header">
+                        <span class="vm-badge">macOS</span>
+                        <h3>UTM & VMware Fusion</h3>
+                    </div>
+                    <p class="vm-desc">Optimized for both modern Apple Silicon (M1/M2/M3/M4) and Intel Macs.</p>
+                    <ul class="vm-specs">
+                        <li><strong>Apple Silicon Macs:</strong> Use <strong>UTM</strong> (free) in <em>Emulate</em> mode (x86_64)</li>
+                        <li><strong>Intel Macs:</strong> Use <strong>VirtualBox</strong> or <strong>VMware Fusion</strong></li>
+                        <li><strong>Memory:</strong> 4096 MB (4 GB RAM allocated)</li>
+                        <li><strong>Cores:</strong> 4 vCPU cores for smooth emulation</li>
+                        <li><strong>Display:</strong> VirtIO-GPU or OpenGL 3D enabled</li>
+                        <li><strong>Boot ISO:</strong> Select the downloaded <code>twilight-os-*.iso</code> as CD/DVD drive</li>
+                    </ul>
+                    <div class="vm-tip">
+                        🍎 <strong>Tip:</strong> On Apple Silicon Macs, download <a href="https://mac.getutm.app/" target="_blank" rel="noopener">UTM</a>, click "+ Create VM", choose "Emulate", select Linux, and attach the ISO.
+                    </div>
+                </div>
             </div>
         </div>
     </section>
