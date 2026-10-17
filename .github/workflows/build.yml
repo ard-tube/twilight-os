@@ -23,10 +23,8 @@ jobs:
         run: |
           cp -r /usr/share/archiso/configs/releng profile
 
-          # 1. Enable multilib repository in pacman.conf and configure NoExtract for branding files
+          # 1. Enable multilib repository in pacman.conf
           sed -i "/\[multilib\]/,/Include/"'s/^#//' profile/pacman.conf
-          sed -i 's|^#NoExtract *=.*|NoExtract = etc/issue etc/issue.net etc/lsb-release etc/os-release usr/lib/os-release etc/skel/.bashrc|' profile/pacman.conf
-          sed -i '/^lsb-release$/d' profile/packages.x86_64
 
           # 2. Branding: Rename ISO & bootloader entries
           sed -i 's/^iso_name=.*/iso_name="twilight-os"/' profile/profiledef.sh
@@ -42,9 +40,8 @@ jobs:
 
           # 4. Copy our overlay files (configs, wallpapers, branding, installers)
           cp -r overlay/airootfs/. profile/airootfs/
-          mkdir -p profile/airootfs/usr/lib
-          cp profile/airootfs/etc/os-release profile/airootfs/usr/lib/os-release 2>/dev/null || true
           chmod +x profile/airootfs/usr/local/bin/* 2>/dev/null || true
+          chmod +x profile/airootfs/root/customize_airootfs.sh 2>/dev/null || true
 
           # 5. User setup: liveuser with wheel & hardware groups
           echo 'liveuser:x:1000:1000:Twilight OS Live User:/home/liveuser:/bin/bash' >> profile/airootfs/etc/passwd
@@ -72,7 +69,7 @@ jobs:
           chmod +x profile/airootfs/home/liveuser/Desktop/*.desktop 2>/dev/null || true
 
           # 8. Register permissions in profiledef.sh
-          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"' profile/profiledef.sh
+          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"\n  ["/usr/local/bin/apply-twilight-branding"]="0:0:755"\n  ["/root/customize_airootfs.sh"]="0:0:755"' profile/profiledef.sh
 
           # 9. Services: SDDM & NetworkManager
           mkdir -p profile/airootfs/etc/systemd/system/multi-user.target.wants

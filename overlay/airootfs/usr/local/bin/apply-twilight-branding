@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Apply Twilight OS branding to root filesystem
+set -e
+
+BRANDING_DIR="/usr/share/twilight/branding"
+
+if [[ -d "$BRANDING_DIR" ]]; then
+    [[ -f "$BRANDING_DIR/os-release" ]] && cp "$BRANDING_DIR/os-release" /etc/os-release
+    [[ -f "$BRANDING_DIR/os-release" ]] && cp "$BRANDING_DIR/os-release" /usr/lib/os-release
+    [[ -f "$BRANDING_DIR/lsb-release" ]] && cp "$BRANDING_DIR/lsb-release" /etc/lsb-release
+    [[ -f "$BRANDING_DIR/issue" ]] && cp "$BRANDING_DIR/issue" /etc/issue
+    [[ -f "$BRANDING_DIR/issue" ]] && cp "$BRANDING_DIR/issue" /etc/issue.net
+    if [[ -f "$BRANDING_DIR/bashrc" ]]; then
+        cp "$BRANDING_DIR/bashrc" /etc/skel/.bashrc
+        if [[ -d /home/liveuser ]]; then
+            cp "$BRANDING_DIR/bashrc" /home/liveuser/.bashrc
+            chown 1000:1000 /home/liveuser/.bashrc 2>/dev/null || true
+        fi
+    fi
+fi

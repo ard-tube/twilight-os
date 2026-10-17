@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = filesystem
+Target = lsb-release
+Target = bash
+
+[Action]
+Description = Applying Twilight OS Branding...
+When = PostTransaction
+Exec = /usr/local/bin/apply-twilight-branding
