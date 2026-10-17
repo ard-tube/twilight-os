@@ -82,8 +82,7 @@ The Twilight OS Setup Assistant allows you to install curated application packs 
 ## 🚀 Download & Installation
 
 ### 1. Download the ISO
-- **GitHub Releases**: Download the latest release from the [Releases page](https://github.com/ard-tube/twilight-os/releases).
-- **Latest CI Artifact**: Download the latest compiled image directly from [GitHub Actions](https://github.com/ard-tube/twilight-os/actions).
+Download the pre-built bootable ISO directly from our official **[GitHub Releases Page](https://github.com/ard-tube/twilight-os/releases)** (`twilight-os-v0.1-pre-alpha-x86_64.iso`). No compilation or technical setup required!
 
 ### 2. Flash to USB
 
