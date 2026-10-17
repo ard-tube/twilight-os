@@ -23,8 +23,10 @@ jobs:
         run: |
           cp -r /usr/share/archiso/configs/releng profile
 
-          # 1. Enable multilib repository in pacman.conf
+          # 1. Enable multilib repository in pacman.conf and configure NoExtract for branding files
           sed -i "/\[multilib\]/,/Include/"'s/^#//' profile/pacman.conf
+          sed -i 's|^#NoExtract *=.*|NoExtract = etc/issue etc/issue.net etc/lsb-release etc/os-release usr/lib/os-release etc/skel/.bashrc|' profile/pacman.conf
+          sed -i '/^lsb-release$/d' profile/packages.x86_64
 
           # 2. Branding: Rename ISO & bootloader entries
           sed -i 's/^iso_name=.*/iso_name="twilight-os"/' profile/profiledef.sh
@@ -40,6 +42,8 @@ jobs:
 
           # 4. Copy our overlay files (configs, wallpapers, branding, installers)
           cp -r overlay/airootfs/. profile/airootfs/
+          mkdir -p profile/airootfs/usr/lib
+          cp profile/airootfs/etc/os-release profile/airootfs/usr/lib/os-release 2>/dev/null || true
           chmod +x profile/airootfs/usr/local/bin/* 2>/dev/null || true
 
           # 5. User setup: liveuser with wheel & hardware groups
