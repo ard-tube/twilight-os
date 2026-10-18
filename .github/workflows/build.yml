@@ -31,6 +31,7 @@ jobs:
           sed -i 's/^iso_label=.*/iso_label="TWILIGHT_$(date +%Y%m)"/' profile/profiledef.sh
           sed -i 's/^iso_publisher=.*/iso_publisher="Twilight OS <https:\/\/github.com\/ard-tube\/twilight-os>"/' profile/profiledef.sh
           sed -i 's/^iso_application=.*/iso_application="Twilight OS Live Environment"/' profile/profiledef.sh
+          sed -i "s/airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" profile/profiledef.sh
 
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux install medium/Twilight OS/g' {} + 2>/dev/null || true
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux/Twilight OS/g' {} + 2>/dev/null || true
@@ -88,6 +89,21 @@ jobs:
           name: twilight-os-iso
           path: out/*.iso
 
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          for f in out/*.iso; do
+            filesize=$(stat -c%s "$f")
+            echo "Generated ISO: $f ($filesize bytes)"
+            if [ "$filesize" -ge 2140000000 ]; then
+              echo "Notice: File exceeds GitHub 2GB API asset limit. Splitting into 1.9GB volumes..."
+              split -b 1900M -d "$f" "release-assets/$(basename "$f").part"
+            else
+              cp "$f" release-assets/
+            fi
+          done
+          ls -lh release-assets/
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -103,6 +119,6 @@ jobs:
             - **Software Suites**: 50 curated essential applications
             - **Live User**: `liveuser` (passwordless sudo enabled)
             - **Artwork**: 5K Twilight Horizon by xyproto (CC0 1.0 Universal)
-          files: out/*.iso
+          files: release-assets/*
           prerelease: true
 
