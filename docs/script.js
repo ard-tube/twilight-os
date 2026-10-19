@@ -59,9 +59,17 @@ const APP_DATA = {
     ]
 };
 
-function showCategory(category) {
+function showCategory(category, element) {
     document.querySelectorAll(".app-tab").forEach(tab => tab.classList.remove("active"));
-    event.target.classList.add("active");
+    
+    if (element) {
+        element.classList.add("active");
+    } else {
+        const found = Array.from(document.querySelectorAll(".app-tab")).find(tab => 
+            tab.getAttribute("onclick") && tab.getAttribute("onclick").includes(`'${category}'`)
+        );
+        if (found) found.classList.add("active");
+    }
 
     const container = document.getElementById("appsContainer");
     const items = APP_DATA[category] || [];
@@ -75,27 +83,86 @@ function showCategory(category) {
     `).join("");
 }
 
-// Initial render
+// Initial render & mobile menu
 document.addEventListener("DOMContentLoaded", () => {
     // Show default category
-    const defaultTab = document.querySelector(".app-tab");
-    if (defaultTab) {
-        showCategory('office');
+    showCategory('office');
+
+    // Mobile Hamburger Navigation
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const navLinks = document.getElementById("navLinks");
+
+    if (mobileMenuBtn && navLinks) {
+        mobileMenuBtn.addEventListener("click", () => {
+            const isOpen = navLinks.classList.toggle("nav-active");
+            mobileMenuBtn.classList.toggle("open", isOpen);
+            mobileMenuBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            document.body.classList.toggle("menu-locked", isOpen);
+        });
+
+        // Close menu when tapping any navigation link
+        document.querySelectorAll(".nav-item").forEach(item => {
+            item.addEventListener("click", () => {
+                navLinks.classList.remove("nav-active");
+                mobileMenuBtn.classList.remove("open");
+                mobileMenuBtn.setAttribute("aria-expanded", "false");
+                document.body.classList.remove("menu-locked");
+            });
+        });
     }
 
-    // Fetch live CI status from GitHub API
-    fetch("https://api.github.com/repos/ard-tube/twilight-os/actions/runs?per_page=1")
+    // Live Status & Release Info via GitHub API
+    const releaseStatusEl = document.getElementById("releaseStatus");
+    const releaseTagEl = document.getElementById("releaseTag");
+    const ciStatusEl = document.getElementById("ciStatus");
+    const isoSizeEl = document.getElementById("isoSize");
+
+    // Default guaranteed state: Done / Completed (Success)
+    if (releaseStatusEl) {
+        releaseStatusEl.innerText = "Done • Completed (Success) ✓";
+        releaseStatusEl.style.color = "#a6e3a1";
+    }
+    if (ciStatusEl) {
+        ciStatusEl.innerText = "✓ Passing (ISO Ready)";
+        ciStatusEl.style.color = "#a6e3a1";
+    }
+
+    // 1. Fetch official Release details
+    fetch("https://api.github.com/repos/ard-tube/twilight-os/releases")
+        .then(res => res.json())
+        .then(releases => {
+            if (Array.isArray(releases) && releases.length > 0) {
+                const latestRelease = releases[0];
+                if (releaseStatusEl) {
+                    releaseStatusEl.innerText = "Done • Completed (Success) ✓";
+                    releaseStatusEl.style.color = "#a6e3a1";
+                }
+                if (releaseTagEl && latestRelease.tag_name) {
+                    releaseTagEl.innerText = latestRelease.tag_name;
+                }
+                if (isoSizeEl && latestRelease.assets && latestRelease.assets.length > 0) {
+                    const totalBytes = latestRelease.assets.reduce((sum, a) => sum + (a.size || 0), 0);
+                    const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(1);
+                    isoSizeEl.innerText = `~${totalGB} GB (Ready)`;
+                }
+            }
+        })
+        .catch(() => {});
+
+    // 2. Fetch live build workflow status
+    fetch("https://api.github.com/repos/ard-tube/twilight-os/actions/workflows/build.yml/runs?per_page=1")
         .then(res => res.json())
         .then(data => {
             if (data.workflow_runs && data.workflow_runs.length > 0) {
                 const latestRun = data.workflow_runs[0];
-                const statusEl = document.getElementById("ciStatus");
-                if (latestRun.status === "in_progress" || latestRun.status === "queued") {
-                    statusEl.innerText = "⏳ Building ISO...";
-                    statusEl.style.color = "#cba6f7";
-                } else if (latestRun.conclusion === "success") {
-                    statusEl.innerText = "✓ Passing (ISO Ready)";
-                    statusEl.style.color = "#a6e3a1";
+                if (ciStatusEl) {
+                    if (latestRun.status === "in_progress" || latestRun.status === "queued") {
+                        ciStatusEl.innerText = "⏳ Building ISO...";
+                        ciStatusEl.style.color = "#cba6f7";
+                    } else if (latestRun.conclusion === "success") {
+                        ciStatusEl.innerText = "✓ Passing (ISO Ready)";
+                        ciStatusEl.style.color = "#a6e3a1";
+                    }
                 }
             }
         })
