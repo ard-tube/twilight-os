@@ -1,22 +1,21 @@
 # ==============================================================================
-# Twilight OS Extra Packages  (keep this list LEAN — the live ISO must be < 2 GB)
+# Twilight OS Extra Packages
+# Keep this list LEAN — the live ISO must stay strictly under 2 GB.
+# Packages like Firefox, Flatpak, Kate, LibreOffice, Steam, and GPU drivers
+# are installed onto the target system via the Twilight Setup Assistant.
 # ==============================================================================
 
-# Core KDE Plasma Desktop & Session
+# Core KDE Plasma Desktop & Session (Wayland)
 plasma-desktop
 plasma-workspace
 plasma-nm
 plasma-pa
-powerdevil
 kscreen
 sddm
 systemsettings
-kinfocenter
 polkit-kde-agent
 konsole
 dolphin
-kate
-firefox
 ark
 
 # Twilight Installer & Dependencies
@@ -24,13 +23,8 @@ python-pyqt6
 dialog
 archinstall
 
-# Flatpak & Package Management
-flatpak
-
-# Fonts & Typography
+# Typography & CJK/Unicode Font
 noto-fonts
-noto-fonts-emoji
-ttf-dejavu
 
 # Themes, Styles & Icons
 breeze
@@ -48,12 +42,8 @@ dosfstools
 e2fsprogs
 ntfs-3g
 
-# Graphics Drivers — lightweight open-source stack only for the LIVE ISO
-# (NVIDIA proprietary, AMD Vulkan, Intel media are installed post-install
-#  via the Twilight Installer's Driver tab)
+# Graphics — Mesa provides universal Wayland/Gallium display support
 mesa
-vulkan-radeon
-vulkan-intel
 
 # Audio Backend & PipeWire
 pipewire
@@ -66,8 +56,6 @@ networkmanager
 
 # System Utilities & Monitoring
 sudo
-git
 nano
 fastfetch
 htop
-btop
