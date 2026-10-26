@@ -138,12 +138,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     releaseStatusEl.style.color = "#a6e3a1";
                 }
                 if (releaseTagEl && latestRelease.tag_name) {
-                    releaseTagEl.innerText = latestRelease.tag_name;
-                }
-                if (isoSizeEl && latestRelease.assets && latestRelease.assets.length > 0) {
-                    const totalBytes = latestRelease.assets.reduce((sum, a) => sum + (a.size || 0), 0);
-                    const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(1);
-                    isoSizeEl.innerText = `~${totalGB} GB (Ready)`;
+                    if (latestRelease.tag_name.startsWith("v1")) {
+                        releaseTagEl.innerText = `${latestRelease.tag_name} (Stable)`;
+                        if (isoSizeEl && latestRelease.assets && latestRelease.assets.length > 0) {
+                            const totalBytes = latestRelease.assets.reduce((sum, a) => sum + (a.size || 0), 0);
+                            const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+                            isoSizeEl.innerText = `${totalGB} GB (Single ISO)`;
+                        }
+                    }
                 }
             }
         })
