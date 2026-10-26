@@ -1,5 +1,5 @@
 # ==============================================================================
-# Twilight OS Extra Packages
+# Twilight OS Extra Packages  (keep this list LEAN — the live ISO must be < 2 GB)
 # ==============================================================================
 
 # Core KDE Plasma Desktop & Session
@@ -48,21 +48,12 @@ dosfstools
 e2fsprogs
 ntfs-3g
 
-# Graphics Drivers - AMD (Open Source)
+# Graphics Drivers — lightweight open-source stack only for the LIVE ISO
+# (NVIDIA proprietary, AMD Vulkan, Intel media are installed post-install
+#  via the Twilight Installer's Driver tab)
 mesa
 vulkan-radeon
-xf86-video-amdgpu
-
-# Graphics Drivers - Intel (Open Source)
 vulkan-intel
-intel-media-driver
-
-# Graphics Drivers - NVIDIA (Universal Open & Proprietary Modules)
-nvidia-open
-nvidia-utils
-nvidia-settings
-nvidia-prime
-xf86-video-nouveau
 
 # Audio Backend & PipeWire
 pipewire
@@ -72,7 +63,6 @@ wireplumber
 
 # Networking
 networkmanager
-network-manager-applet
 
 # System Utilities & Monitoring
 sudo

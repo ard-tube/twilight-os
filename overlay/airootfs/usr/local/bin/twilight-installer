@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Twilight OS Installer Master Launcher
-set -e
+# ==============================================================================
+# Twilight OS Installer — Master Launcher
+# Detects environment (Wayland/X11 or console/TTY) and launches the appropriate
+# installer (Qt6 GUI or Terminal TUI) with resilient fallback.
+# ==============================================================================
+set -euo pipefail
 
-# If --cli flag is given, force CLI
-if [[ "$1" == "--cli" || "$1" == "-c" ]]; then
-    exec /usr/local/bin/twilight-installer-cli
+# Force CLI if flag is passed
+if [[ "${1:-}" == "--cli" || "${1:-}" == "-c" ]]; then
+    shift
+    exec /usr/local/bin/twilight-installer-cli "$@"
 fi
 
-# If GUI environment exists, launch PyQt6 installer
-if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]] && command -v python3 >/dev/null 2>&1; then
-    exec /usr/local/bin/twilight-installer-gui
+# If graphical session is active and PyQt6 is functional, launch GUI
+if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && python3 -c "import PyQt6" >/dev/null 2>&1; then
+    # Launch GUI; if it exits with an error code, fallback to CLI
+    /usr/local/bin/twilight-installer-gui "$@" || exec /usr/local/bin/twilight-installer-cli "$@"
 else
-    exec /usr/local/bin/twilight-installer-cli
+    exec /usr/local/bin/twilight-installer-cli "$@"
 fi

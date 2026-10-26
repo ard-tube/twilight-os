@@ -28,23 +28,25 @@ jobs:
 
           # 2. Branding: Rename ISO & bootloader entries
           sed -i 's/^iso_name=.*/iso_name="twilight-os"/' profile/profiledef.sh
-          sed -i 's/^iso_label=.*/iso_label="TWILIGHT_$(date +%Y%m)"/' profile/profiledef.sh
+          sed -i 's/^iso_label=.*/iso_label="TWILIGHT_$(date +%Y%m)\"/' profile/profiledef.sh
           sed -i 's/^iso_publisher=.*/iso_publisher="Twilight OS <https:\/\/github.com\/ard-tube\/twilight-os>"/' profile/profiledef.sh
           sed -i 's/^iso_application=.*/iso_application="Twilight OS Live Environment"/' profile/profiledef.sh
-          sed -i "s/airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" profile/profiledef.sh
+
+          # 3. Aggressive SquashFS compression to stay under 2 GB
+          sed -i "s/airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M' '-Xlevel' '9')/" profile/profiledef.sh
 
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux install medium/Twilight OS/g' {} + 2>/dev/null || true
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux/Twilight OS/g' {} + 2>/dev/null || true
 
-          # 3. Add extra packages
+          # 4. Add extra packages
           cat overlay/packages.extra >> profile/packages.x86_64
 
-          # 4. Copy our overlay files (configs, wallpapers, branding, installers)
+          # 5. Copy our overlay files (configs, wallpapers, branding, installers)
           cp -r overlay/airootfs/. profile/airootfs/
           chmod +x profile/airootfs/usr/local/bin/* 2>/dev/null || true
           chmod +x profile/airootfs/root/customize_airootfs.sh 2>/dev/null || true
 
-          # 5. User setup: liveuser with wheel & hardware groups
+          # 6. User setup: liveuser with wheel & hardware groups
           echo 'liveuser:x:1000:1000:Twilight OS Live User:/home/liveuser:/bin/bash' >> profile/airootfs/etc/passwd
           echo 'liveuser::14871::::::' >> profile/airootfs/etc/shadow
           echo 'liveuser:x:1000:' >> profile/airootfs/etc/group
@@ -57,22 +59,22 @@ jobs:
             sed -i "s/:,liveuser/:liveuser/" profile/airootfs/etc/gshadow 2>/dev/null || true
           done
 
-          # 6. Sudoers: NOPASSWD for wheel and liveuser
+          # 7. Sudoers: NOPASSWD for wheel and liveuser
           mkdir -p profile/airootfs/etc/sudoers.d
           echo 'liveuser ALL=(ALL:ALL) NOPASSWD: ALL' > profile/airootfs/etc/sudoers.d/liveuser
           echo '%wheel ALL=(ALL:ALL) NOPASSWD: ALL' >> profile/airootfs/etc/sudoers.d/liveuser
           chmod 0440 profile/airootfs/etc/sudoers.d/liveuser
 
-          # 7. Copy /etc/skel to /home/liveuser and set ownership
+          # 8. Copy /etc/skel to /home/liveuser and set ownership
           mkdir -p profile/airootfs/home/liveuser
           cp -r profile/airootfs/etc/skel/. profile/airootfs/home/liveuser/
           chown -R 1000:1000 profile/airootfs/home/liveuser
           chmod +x profile/airootfs/home/liveuser/Desktop/*.desktop 2>/dev/null || true
 
-          # 8. Register permissions in profiledef.sh
-          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"\n  ["/usr/local/bin/apply-twilight-branding"]="0:0:755"\n  ["/root/customize_airootfs.sh"]="0:0:755"' profile/profiledef.sh
+          # 9. Register permissions in profiledef.sh
+          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"\n  ["/usr/local/bin/twilight-finalize-install"]="0:0:755"\n  ["/usr/local/bin/apply-twilight-branding"]="0:0:755"\n  ["/root/customize_airootfs.sh"]="0:0:755"' profile/profiledef.sh
 
-          # 9. Services: SDDM & NetworkManager
+          # 10. Services: SDDM & NetworkManager
           mkdir -p profile/airootfs/etc/systemd/system/multi-user.target.wants
           ln -sf /usr/lib/systemd/system/sddm.service profile/airootfs/etc/systemd/system/display-manager.service
           ln -sf /usr/lib/systemd/system/graphical.target profile/airootfs/etc/systemd/system/default.target
@@ -83,42 +85,43 @@ jobs:
           pacman -Scc --noconfirm || true
           mkarchiso -v -r -w /tmp/archiso-work -o out profile
 
+      - name: Verify ISO size
+        run: |
+          ISO_FILE=$(ls -1 out/*.iso | head -n 1)
+          ISO_SIZE=$(stat -c%s "$ISO_FILE")
+          ISO_SIZE_MB=$((ISO_SIZE / 1024 / 1024))
+          echo "ISO file: $ISO_FILE"
+          echo "ISO size: ${ISO_SIZE_MB} MB ($ISO_SIZE bytes)"
+          if [ "$ISO_SIZE" -ge 2140000000 ]; then
+            echo "::error::ISO exceeds 2 GB limit (${ISO_SIZE_MB} MB). Reduce packages in overlay/packages.extra."
+            exit 1
+          fi
+          echo "✅ ISO is under 2 GB — safe for single-file GitHub Release upload."
+
       - name: Upload ISO as artifact
         uses: actions/upload-artifact@v4
         with:
           name: twilight-os-iso
           path: out/*.iso
 
-      - name: Prepare release assets
-        run: |
-          mkdir -p release-assets
-          for f in out/*.iso; do
-            filesize=$(stat -c%s "$f")
-            echo "Generated ISO: $f ($filesize bytes)"
-            if [ "$filesize" -ge 2140000000 ]; then
-              echo "Notice: File exceeds GitHub 2GB API asset limit. Splitting into 1.9GB volumes..."
-              split -b 1900M -d "$f" "release-assets/$(basename "$f").part"
-            else
-              cp "$f" release-assets/
-            fi
-          done
-          ls -lh release-assets/
-
-      - name: Publish GitHub release
+      - name: Publish GitHub release (single ISO file)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1-pre-alpha
-          name: "Twilight OS v0.1 Pre-Alpha"
+          tag_name: ${{ github.ref_name }}
+          name: "Twilight OS ${{ github.ref_name }}"
           body: |
-            ## 🌌 Twilight OS v0.1 Pre-Alpha
+            ## 🌌 Twilight OS ${{ github.ref_name }}
             Official bootable live ISO featuring KDE Plasma 6 (Wayland).
 
+            **Download the single `.iso` file below and flash it to a USB drive.**
+
+            ### Features
             - **Desktop**: KDE Plasma 6 on Wayland
-            - **Graphics**: Universal NVIDIA Open modules + AMD Mesa + Intel drivers
+            - **Graphics**: Universal open-source GPU drivers (NVIDIA/AMD/Intel proprietary drivers available in the installer)
             - **Installers**: Dual Qt6 GUI Installer (`twilight-installer-gui`) + Terminal TUI (`twilight-installer-cli`)
-            - **Software Suites**: 50 curated essential applications
+            - **Software Suites**: 50 curated essential applications (selectable during installation)
             - **Live User**: `liveuser` (passwordless sudo enabled)
             - **Artwork**: 5K Twilight Horizon by xyproto (CC0 1.0 Universal)
-          files: release-assets/*
+          files: out/*.iso
           prerelease: true
-

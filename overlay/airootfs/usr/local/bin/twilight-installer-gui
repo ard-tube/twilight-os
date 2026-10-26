@@ -2,18 +2,110 @@
 """
 Twilight OS Setup Assistant (GUI Installer)
 Native Qt6 graphical installer for Twilight OS.
+
+This installer provides a complete guided installation experience:
+  1. Welcome + System Info
+  2. Locale & Timezone
+  3. Disk / Partitioning
+  4. User Account Setup
+  5. Software Suite Selection (50 curated apps)
+  6. GPU Drivers & Extras
+  7. Review & Install
+
+The user's choices are written to a twilight-install.conf file and passed
+to a post-install script that applies them on the target system.
 """
 
 import sys
 import os
+import re
+import json
 import subprocess
+import shutil
+import textwrap
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTabWidget, QCheckBox, QGroupBox, QGridLayout,
-    QLineEdit, QComboBox, QMessageBox, QProgressBar, QScrollArea, QFrame
+    QLineEdit, QComboBox, QMessageBox, QProgressBar, QScrollArea, QFrame,
+    QTextEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtGui import QFont
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Constants
+# ──────────────────────────────────────────────────────────────────────────────
+
+VERSION = "0.2.0"
+INSTALL_CONF = "/tmp/twilight-install.conf"
+POST_INSTALL_SCRIPT = "/usr/local/bin/twilight-post-install"
+
+# Valid Linux username pattern
+USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+# Valid hostname pattern (RFC 1123)
+HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$")
+
+# Common timezones grouped by region
+TIMEZONES = {
+    "Africa": ["Africa/Cairo", "Africa/Johannesburg", "Africa/Lagos", "Africa/Nairobi"],
+    "America": [
+        "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+        "America/Toronto", "America/Sao_Paulo", "America/Mexico_City", "America/Argentina/Buenos_Aires",
+    ],
+    "Asia": [
+        "Asia/Istanbul", "Asia/Dubai", "Asia/Kolkata", "Asia/Shanghai",
+        "Asia/Tokyo", "Asia/Seoul", "Asia/Singapore", "Asia/Bangkok",
+        "Asia/Riyadh", "Asia/Tehran", "Asia/Jerusalem",
+    ],
+    "Australia": ["Australia/Sydney", "Australia/Melbourne", "Australia/Perth"],
+    "Europe": [
+        "Europe/London", "Europe/Berlin", "Europe/Paris", "Europe/Rome",
+        "Europe/Madrid", "Europe/Amsterdam", "Europe/Moscow", "Europe/Warsaw",
+        "Europe/Stockholm", "Europe/Helsinki", "Europe/Athens", "Europe/Bucharest",
+    ],
+    "Pacific": ["Pacific/Auckland", "Pacific/Fiji", "Pacific/Honolulu"],
+    "UTC": ["UTC"],
+}
+
+# Common locales
+LOCALES = [
+    ("en_US.UTF-8", "English (United States)"),
+    ("en_GB.UTF-8", "English (United Kingdom)"),
+    ("de_DE.UTF-8", "Deutsch (Germany)"),
+    ("fr_FR.UTF-8", "Français (France)"),
+    ("es_ES.UTF-8", "Español (Spain)"),
+    ("it_IT.UTF-8", "Italiano (Italy)"),
+    ("pt_BR.UTF-8", "Português (Brazil)"),
+    ("nl_NL.UTF-8", "Nederlands (Netherlands)"),
+    ("pl_PL.UTF-8", "Polski (Poland)"),
+    ("ru_RU.UTF-8", "Русский (Russia)"),
+    ("tr_TR.UTF-8", "Türkçe (Turkey)"),
+    ("ar_SA.UTF-8", "العربية (Saudi Arabia)"),
+    ("ja_JP.UTF-8", "日本語 (Japan)"),
+    ("ko_KR.UTF-8", "한국어 (Korea)"),
+    ("zh_CN.UTF-8", "简体中文 (China)"),
+]
+
+# Keyboard layouts
+KEYBOARD_LAYOUTS = [
+    ("us", "US English"),
+    ("gb", "UK English"),
+    ("de", "German"),
+    ("fr", "French"),
+    ("es", "Spanish"),
+    ("it", "Italian"),
+    ("pt", "Portuguese"),
+    ("br", "Brazilian Portuguese"),
+    ("nl", "Dutch"),
+    ("pl", "Polish"),
+    ("ru", "Russian"),
+    ("tr", "Turkish"),
+    ("ar", "Arabic"),
+    ("jp", "Japanese"),
+    ("kr", "Korean"),
+]
 
 # Curated Application Packages
 SOFTWARE_CATEGORIES = {
@@ -30,48 +122,60 @@ SOFTWARE_CATEGORIES = {
     ],
     "🎨 Media & Entertainment": [
         ("vlc", "VLC Media Player", True),
-        ("mpv", "MPV Minimal High-Performance Video Player", True),
+        ("mpv", "MPV Minimal High-Performance Player", True),
         ("obs-studio", "OBS Studio Screen Recorder & Streaming", False),
         ("audacity", "Audacity Multi-track Audio Editor", False),
         ("kdenlive", "Kdenlive Advanced Video Editor", False),
         ("gimp", "GIMP Advanced Image Editor", True),
         ("krita", "Krita Digital Painting Studio", False),
-        ("blender", "Blender 3D Modeling & Animation Suite", False),
+        ("blender", "Blender 3D Modeling & Animation", False),
         ("inkscape", "Inkscape Vector Graphics Editor", False),
     ],
     "🎮 Gaming & Performance": [
         ("steam", "Steam Gaming Platform (multilib)", True),
         ("lutris", "Lutris Open Gaming Platform", True),
-        ("mangohud", "MangoHud Vulkan/OpenGL Overlay & Benchmark", True),
+        ("mangohud", "MangoHud Vulkan/OpenGL Overlay", True),
         ("gamemode", "Feral GameMode Performance Optimizer", True),
         ("discord", "Discord Voice & Chat Messenger", True),
         ("retroarch", "RetroArch Multi-system Emulator", False),
         ("protontricks", "Protontricks WINE Management Tool", False),
         ("goverlay", "GOverlay GUI for MangoHud & vkBasalt", False),
-        ("wine", "WINE Compatibility Layer for Windows Apps", True),
+        ("wine", "WINE Compatibility Layer", True),
     ],
     "🌐 Web & Communication": [
         ("firefox", "Mozilla Firefox Privacy Browser", True),
-        ("chromium", "Chromium Open-Source Web Browser", False),
+        ("chromium", "Chromium Open-Source Browser", False),
         ("qbittorrent", "qBittorrent BitTorrent Client", True),
-        ("telegram-desktop", "Telegram Desktop Secure Messenger", True),
+        ("telegram-desktop", "Telegram Desktop Messenger", True),
         ("signal-desktop", "Signal Private Messenger", False),
-        ("element-desktop", "Element Matrix Secure Chat Client", False),
-        ("filezilla", "FileZilla Fast FTP/SFTP Client", False),
-        ("uget", "uGet Multi-connection Download Manager", False),
+        ("element-desktop", "Element Matrix Chat Client", False),
+        ("filezilla", "FileZilla FTP/SFTP Client", False),
+        ("uget", "uGet Download Manager", False),
     ],
     "🛠️ System Utilities": [
-        ("timeshift", "Timeshift System Backup & Restore Tool", True),
+        ("timeshift", "Timeshift System Backup & Restore", True),
         ("gparted", "GParted Partition Manager", True),
         ("partitionmanager", "KDE Partition Manager", True),
-        ("btop", "btop Resource Monitor & Process Viewer", True),
+        ("btop", "btop Resource Monitor", True),
         ("htop", "htop Interactive Process Viewer", True),
-        ("fastfetch", "Fastfetch Neofetch-style System Info", True),
-        ("flameshot", "Flameshot Powerful Screenshot Tool", True),
+        ("fastfetch", "Fastfetch System Info", True),
+        ("flameshot", "Flameshot Screenshot Tool", True),
         ("baobab", "Disk Usage Analyzer (Baobab)", False),
-        ("bleachbit", "BleachBit System Cleaner & Privacy Tool", False),
-    ]
+        ("bleachbit", "BleachBit System Cleaner", False),
+    ],
 }
+
+# GPU driver packages
+DRIVER_PACKAGES = {
+    "nvidia": ["nvidia-open", "nvidia-utils", "nvidia-settings", "nvidia-prime"],
+    "amd": ["mesa", "vulkan-radeon", "xf86-video-amdgpu", "libva-mesa-driver"],
+    "intel": ["vulkan-intel", "intel-media-driver"],
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Stylesheet (Catppuccin Mocha theme)
+# ──────────────────────────────────────────────────────────────────────────────
 
 TWILIGHT_STYLESHEET = """
 QMainWindow {
@@ -79,7 +183,7 @@ QMainWindow {
 }
 QWidget {
     color: #cdd6f4;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
 }
 QTabWidget::pane {
@@ -91,8 +195,8 @@ QTabWidget::pane {
 QTabBar::tab {
     background: #181825;
     color: #a6adc8;
-    padding: 10px 18px;
-    margin-right: 4px;
+    padding: 10px 16px;
+    margin-right: 3px;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
     border: 1px solid #313244;
@@ -102,6 +206,10 @@ QTabBar::tab:selected {
     color: #cba6f7;
     font-weight: bold;
     border-bottom: 2px solid #cba6f7;
+}
+QTabBar::tab:hover:!selected {
+    background: #1e1e2e;
+    color: #f5c2e7;
 }
 QGroupBox {
     border: 1px solid #45475a;
@@ -124,22 +232,42 @@ QPushButton {
     padding: 10px 22px;
     font-weight: bold;
     font-size: 13px;
+    min-width: 80px;
 }
 QPushButton:hover {
     background-color: #b4befe;
+}
+QPushButton:pressed {
+    background-color: #74c7ec;
+}
+QPushButton:disabled {
+    background-color: #45475a;
+    color: #6c7086;
 }
 QPushButton#installBtn {
     background-color: #cba6f7;
     color: #11111b;
     font-size: 15px;
-    padding: 12px 28px;
+    padding: 14px 32px;
+    min-width: 200px;
 }
 QPushButton#installBtn:hover {
     background-color: #f5c2e7;
 }
+QPushButton#installBtn:pressed {
+    background-color: #f5e0dc;
+}
+QPushButton#dangerBtn {
+    background-color: #f38ba8;
+    color: #11111b;
+}
+QPushButton#dangerBtn:hover {
+    background-color: #eba0ac;
+}
 QPushButton#secondaryBtn {
     background-color: #313244;
     color: #cdd6f4;
+    min-width: 60px;
 }
 QPushButton#secondaryBtn:hover {
     background-color: #45475a;
@@ -148,11 +276,27 @@ QLineEdit, QComboBox {
     background-color: #181825;
     border: 1px solid #45475a;
     border-radius: 6px;
-    padding: 8px;
+    padding: 8px 12px;
     color: #cdd6f4;
+    selection-background-color: #cba6f7;
+    selection-color: #11111b;
 }
 QLineEdit:focus, QComboBox:focus {
     border: 1px solid #cba6f7;
+}
+QLineEdit:disabled {
+    background-color: #11111b;
+    color: #6c7086;
+}
+QComboBox::drop-down {
+    border: none;
+    padding-right: 8px;
+}
+QComboBox QAbstractItemView {
+    background-color: #1e1e2e;
+    border: 1px solid #45475a;
+    selection-background-color: #313244;
+    color: #cdd6f4;
 }
 QCheckBox {
     spacing: 8px;
@@ -169,245 +313,660 @@ QCheckBox::indicator:checked {
     background: #cba6f7;
     border: 1px solid #cba6f7;
 }
+QCheckBox::indicator:hover {
+    border: 1px solid #89b4fa;
+}
 QProgressBar {
     border: 1px solid #45475a;
     border-radius: 6px;
     text-align: center;
     background-color: #181825;
     color: #cdd6f4;
+    min-height: 24px;
 }
 QProgressBar::chunk {
-    background-color: #cba6f7;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #cba6f7, stop:1 #89b4fa);
     border-radius: 5px;
 }
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+QScrollBar:vertical {
+    background: #181825;
+    width: 10px;
+    border-radius: 5px;
+}
+QScrollBar::handle:vertical {
+    background: #45475a;
+    border-radius: 5px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #585b70;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QTextEdit {
+    background-color: #11111b;
+    border: 1px solid #313244;
+    border-radius: 6px;
+    padding: 8px;
+    color: #a6e3a1;
+    font-family: "Noto Sans Mono", "Cascadia Code", monospace;
+    font-size: 12px;
+}
+QLabel#errorLabel {
+    color: #f38ba8;
+    font-weight: bold;
+}
+QLabel#successLabel {
+    color: #a6e3a1;
+    font-weight: bold;
+}
+QLabel#infoLabel {
+    color: #89b4fa;
+}
 """
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Worker Thread for Installation
+# ──────────────────────────────────────────────────────────────────────────────
+
+class InstallWorker(QThread):
+    """Background thread that runs the installation process."""
+    progress = pyqtSignal(str)       # status message
+    log_output = pyqtSignal(str)     # terminal output line
+    finished_ok = pyqtSignal()       # installation succeeded
+    finished_err = pyqtSignal(str)   # installation failed with error
+
+    def __init__(self, config: dict, parent=None):
+        super().__init__(parent)
+        self.config = config
+
+    def run(self):
+        try:
+            # Step 1: Write config to disk
+            self.progress.emit("Writing installation configuration...")
+            conf_path = Path(INSTALL_CONF)
+            conf_path.write_text(json.dumps(self.config, indent=2), encoding="utf-8")
+
+            # Step 2: Launch archinstall with the user config
+            self.progress.emit("Starting archinstall guided installer...")
+            self.log_output.emit("═" * 60)
+            self.log_output.emit("  Twilight OS Installation")
+            self.log_output.emit("═" * 60)
+            self.log_output.emit(f"Target disk: {self.config.get('disk', 'N/A')}")
+            self.log_output.emit(f"Username: {self.config.get('username', 'N/A')}")
+            self.log_output.emit(f"Hostname: {self.config.get('hostname', 'N/A')}")
+            self.log_output.emit(f"Locale: {self.config.get('locale', 'N/A')}")
+            self.log_output.emit(f"Timezone: {self.config.get('timezone', 'N/A')}")
+            self.log_output.emit(f"Packages: {len(self.config.get('packages', []))} selected")
+            self.log_output.emit(f"Drivers: {', '.join(self.config.get('drivers', [])) or 'None'}")
+            self.log_output.emit("")
+            self.log_output.emit("Launching archinstall...")
+            self.log_output.emit("Follow the prompts in the terminal window.")
+            self.log_output.emit("")
+
+            # Write the post-install script that will be run inside the chroot
+            post_script = self._generate_post_install_script()
+            post_path = Path("/tmp/twilight-post-install.sh")
+            post_path.write_text(post_script, encoding="utf-8")
+            post_path.chmod(0o755)
+
+            self.progress.emit("Installation configuration saved. Launching archinstall...")
+            self.finished_ok.emit()
+
+        except Exception as e:
+            self.finished_err.emit(str(e))
+
+    def _generate_post_install_script(self) -> str:
+        """Generate a bash script that applies Twilight OS customizations
+        after archinstall completes."""
+        packages = self.config.get("packages", [])
+        drivers = self.config.get("drivers", [])
+        driver_pkgs = []
+        for d in drivers:
+            driver_pkgs.extend(DRIVER_PACKAGES.get(d, []))
+        all_pkgs = packages + driver_pkgs
+        pkg_str = " ".join(all_pkgs) if all_pkgs else ""
+
+        locale = self.config.get("locale", "en_US.UTF-8")
+        timezone = self.config.get("timezone", "UTC")
+        hostname = self.config.get("hostname", "twilight-pc")
+        keyboard = self.config.get("keyboard", "us")
+        enable_flatpak = self.config.get("flatpak", True)
+
+        script = textwrap.dedent(f"""\
+            #!/usr/bin/env bash
+            # Twilight OS Post-Install Script
+            # Auto-generated by Twilight OS Setup Assistant v{VERSION}
+            set -euo pipefail
+
+            echo "════════════════════════════════════════════════════"
+            echo "  Twilight OS Post-Installation Setup"
+            echo "════════════════════════════════════════════════════"
+            echo ""
+
+            # Locale
+            echo "→ Setting locale to {locale}..."
+            sed -i 's/^#\\?{locale}/{locale}/' /etc/locale.gen 2>/dev/null || true
+            echo "LANG={locale}" > /etc/locale.conf
+            locale-gen
+
+            # Timezone
+            echo "→ Setting timezone to {timezone}..."
+            ln -sf /usr/share/zoneinfo/{timezone} /etc/localtime
+            hwclock --systohc
+
+            # Hostname
+            echo "→ Setting hostname to {hostname}..."
+            echo "{hostname}" > /etc/hostname
+            cat > /etc/hosts << 'HOSTS'
+            127.0.0.1   localhost
+            ::1         localhost
+            127.0.1.1   {hostname}.localdomain {hostname}
+            HOSTS
+
+            # Keyboard
+            echo "→ Setting keyboard layout to {keyboard}..."
+            echo "KEYMAP={keyboard}" > /etc/vconsole.conf
+
+            # Install selected packages
+            if [ -n "{pkg_str}" ]; then
+                echo ""
+                echo "→ Installing {len(all_pkgs)} selected packages..."
+                pacman -S --noconfirm --needed {pkg_str} || echo "Warning: Some packages may have failed to install."
+            fi
+
+            # Flatpak
+            {"" if not enable_flatpak else '''
+            echo ""
+            echo "→ Enabling Flatpak & Flathub..."
+            pacman -S --noconfirm --needed flatpak || true
+            flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+            '''}
+
+            # Apply Twilight OS branding
+            if [[ -x /usr/local/bin/apply-twilight-branding ]]; then
+                echo ""
+                echo "→ Applying Twilight OS branding..."
+                /usr/local/bin/apply-twilight-branding
+            fi
+
+            echo ""
+            echo "════════════════════════════════════════════════════"
+            echo "  ✅ Twilight OS post-install setup complete!"
+            echo "════════════════════════════════════════════════════"
+            echo ""
+        """)
+        return script
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Main Window
+# ──────────────────────────────────────────────────────────────────────────────
 
 class InstallerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Twilight OS Setup Assistant")
-        self.resize(850, 680)
+        self.setWindowTitle(f"Twilight OS Setup Assistant v{VERSION}")
+        self.resize(900, 720)
+        self.setMinimumSize(700, 550)
         self.setStyleSheet(TWILIGHT_STYLESHEET)
 
         self.checkboxes = {}
+        self.worker = None
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setContentsMargins(16, 12, 16, 12)
+        main_layout.setSpacing(8)
 
-        # Header Banner
+        # ── Header ──
         header = QFrame()
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 10)
-        
-        title_label = QLabel("🌌 Twilight OS Installer")
+        header_layout.setContentsMargins(4, 0, 4, 8)
+
+        title_label = QLabel("🌌 Twilight OS Setup Assistant")
         title_font = QFont()
-        title_font.setPointSize(20)
+        title_font.setPointSize(18)
         title_font.setBold(True)
         title_label.setFont(title_font)
         title_label.setStyleSheet("color: #cba6f7;")
         header_layout.addWidget(title_label)
-        
-        subtitle = QLabel("Rolling Release • KDE Plasma 6")
-        subtitle.setStyleSheet("color: #89b4fa; font-style: italic;")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        header_layout.addWidget(subtitle)
-        
+
+        version_label = QLabel(f"v{VERSION} • KDE Plasma 6 • Rolling Release")
+        version_label.setStyleSheet("color: #89b4fa; font-style: italic; font-size: 12px;")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        header_layout.addWidget(version_label)
+
         main_layout.addWidget(header)
 
-        # Tabs
+        # ── Tabs ──
         self.tabs = QTabWidget()
+        self.tabs.currentChanged.connect(self._on_tab_changed)
         main_layout.addWidget(self.tabs)
 
-        self.setup_welcome_tab()
-        self.setup_disk_tab()
-        self.setup_user_tab()
-        self.setup_software_tab()
-        self.setup_drivers_tab()
-        self.setup_install_tab()
+        self._setup_welcome_tab()
+        self._setup_locale_tab()
+        self._setup_disk_tab()
+        self._setup_user_tab()
+        self._setup_software_tab()
+        self._setup_drivers_tab()
+        self._setup_install_tab()
 
-        # Bottom Navigation
+        # ── Bottom Navigation ──
         nav_layout = QHBoxLayout()
-        nav_layout.setContentsMargins(0, 10, 0, 0)
-        
+        nav_layout.setContentsMargins(0, 8, 0, 0)
+
         self.btn_back = QPushButton("◀ Back")
         self.btn_back.setObjectName("secondaryBtn")
-        self.btn_back.clicked.connect(self.prev_tab)
+        self.btn_back.clicked.connect(self._prev_tab)
         nav_layout.addWidget(self.btn_back)
-        
+
+        nav_layout.addStretch()
+
+        self.nav_status = QLabel("")
+        self.nav_status.setStyleSheet("color: #585b70; font-size: 12px;")
+        nav_layout.addWidget(self.nav_status)
+
         nav_layout.addStretch()
 
         self.btn_next = QPushButton("Next ▶")
-        self.btn_next.clicked.connect(self.next_tab)
+        self.btn_next.clicked.connect(self._next_tab)
         nav_layout.addWidget(self.btn_next)
 
         main_layout.addLayout(nav_layout)
-        self.update_nav_buttons()
+        self._update_nav()
 
-    def update_nav_buttons(self):
-        current = self.tabs.currentIndex()
+    # ── Navigation ──────────────────────────────────────────────────────────
+
+    def _on_tab_changed(self, _index):
+        self._update_nav()
+
+    def _update_nav(self):
+        idx = self.tabs.currentIndex()
         total = self.tabs.count()
-        self.btn_back.setEnabled(current > 0)
-        self.btn_next.setEnabled(current < total - 1)
+        self.btn_back.setEnabled(idx > 0)
+        self.btn_next.setEnabled(idx < total - 1)
+        self.nav_status.setText(f"Step {idx + 1} of {total}")
 
-    def next_tab(self):
+    def _next_tab(self):
         self.tabs.setCurrentIndex(self.tabs.currentIndex() + 1)
-        self.update_nav_buttons()
 
-    def prev_tab(self):
+    def _prev_tab(self):
         self.tabs.setCurrentIndex(self.tabs.currentIndex() - 1)
-        self.update_nav_buttons()
 
-    def setup_welcome_tab(self):
+    # ── Tab 1: Welcome ──────────────────────────────────────────────────────
+
+    def _setup_welcome_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setSpacing(14)
 
         intro = QLabel(
-            "<h2>Welcome to Twilight OS!</h2>"
-            "<p>Twilight OS is a modern, responsive, and performance-tuned operating system "
-            "powered by Arch Linux and the KDE Plasma 6 desktop.</p>"
-            "<p>This Setup Assistant will guide you through setting up your storage, "
-            "configuring user accounts, selecting from <b>50 curated essential applications</b>, "
-            "and installing universal graphics drivers.</p>"
+            "<h2 style='color: #cba6f7;'>Welcome to Twilight OS!</h2>"
+            "<p style='font-size: 14px;'>Twilight OS is a modern, daily-driver operating system "
+            "powered by <b>Arch Linux</b> and the <b>KDE Plasma 6</b> desktop on Wayland.</p>"
+            "<p style='font-size: 14px;'>This Setup Assistant will guide you through:</p>"
+            "<ul style='font-size: 14px;'>"
+            "<li>Locale, timezone & keyboard configuration</li>"
+            "<li>Disk selection & partitioning</li>"
+            "<li>User account creation</li>"
+            "<li>Software suite selection (50 curated apps)</li>"
+            "<li>GPU driver installation</li>"
+            "</ul>"
         )
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #cdd6f4; font-size: 14px; line-height: 1.5;")
         layout.addWidget(intro)
 
-        info_box = QGroupBox("System Information")
-        info_layout = QVBoxLayout(info_box)
-        
-        # Read system details
-        kernel = os.uname().release
-        info_layout.addWidget(QLabel(f"<b>Kernel:</b> Linux {kernel}"))
-        info_layout.addWidget(QLabel("<b>Desktop Environment:</b> KDE Plasma 6 (Wayland)"))
-        info_layout.addWidget(QLabel("<b>Live User:</b> liveuser (Passwordless sudo enabled)"))
-        layout.addWidget(info_box)
+        info_box = QGroupBox("Live Environment Info")
+        info_layout = QGridLayout(info_box)
+        info_layout.setSpacing(8)
 
+        try:
+            kernel = os.uname().release
+        except (AttributeError, OSError):
+            kernel = "unknown"
+
+        info_items = [
+            ("Kernel", f"Linux {kernel}"),
+            ("Desktop", "KDE Plasma 6 (Wayland)"),
+            ("Live User", "liveuser (passwordless sudo)"),
+            ("Installer", f"v{VERSION}"),
+        ]
+        for row, (key, val) in enumerate(info_items):
+            info_layout.addWidget(QLabel(f"<b>{key}:</b>"), row, 0)
+            info_layout.addWidget(QLabel(val), row, 1)
+
+        layout.addWidget(info_box)
         layout.addStretch()
         self.tabs.addTab(tab, "1. Welcome")
 
-    def setup_disk_tab(self):
+    # ── Tab 2: Locale & Timezone ────────────────────────────────────────────
+
+    def _setup_locale_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
+        layout.setSpacing(12)
 
-        lbl = QLabel("<h3>Storage & Partitioning</h3><p>Choose the target drive to install Twilight OS:</p>")
-        lbl.setWordWrap(True)
-        layout.addWidget(lbl)
-
-        self.disk_combo = QComboBox()
-        self.populate_disks()
-        layout.addWidget(self.disk_combo)
-
-        btn_refresh = QPushButton("Refresh Drives")
-        btn_refresh.setObjectName("secondaryBtn")
-        btn_refresh.clicked.connect(self.populate_disks)
-        layout.addWidget(btn_refresh)
-
-        btn_partitioner = QPushButton("Launch Partition Manager (Manual)")
-        btn_partitioner.setObjectName("secondaryBtn")
-        btn_partitioner.clicked.connect(self.launch_partitioner)
-        layout.addWidget(btn_partitioner)
-
-        layout.addStretch()
-        self.tabs.addTab(tab, "2. Storage")
-
-    def populate_disks(self):
-        self.disk_combo.clear()
-        try:
-            output = subprocess.check_output(["lsblk", "-d", "-n", "-o", "NAME,SIZE,MODEL"], text=True)
-            for line in output.strip().split("\n"):
-                if line:
-                    parts = line.split()
-                    name = parts[0]
-                    if not name.startswith("loop") and not name.startswith("airoot"):
-                        self.disk_combo.addItem(f"/dev/{name} ({' '.join(parts[1:])})", f"/dev/{name}")
-        except Exception:
-            self.disk_combo.addItem("/dev/sda (Drive)", "/dev/sda")
-
-    def launch_partitioner(self):
-        for tool in ["partitionmanager", "gparted"]:
-            if subprocess.run(["which", tool], capture_output=True).returncode == 0:
-                subprocess.Popen(["sudo", tool])
-                return
-        QMessageBox.warning(self, "Partition Manager", "No partition manager found.")
-
-    def setup_user_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        lbl = QLabel("<h3>User & Machine Configuration</h3>")
-        layout.addWidget(lbl)
+        layout.addWidget(QLabel("<h3>Locale, Timezone & Keyboard</h3>"))
 
         grid = QGridLayout()
         grid.setSpacing(12)
 
-        grid.addWidget(QLabel("Full Name:"), 0, 0)
-        self.input_realname = QLineEdit()
-        self.input_realname.setText("Arda")
-        grid.addWidget(self.input_realname, 0, 1)
+        # Locale
+        grid.addWidget(QLabel("System Locale:"), 0, 0)
+        self.combo_locale = QComboBox()
+        for code, name in LOCALES:
+            self.combo_locale.addItem(f"{name}  [{code}]", code)
+        self.combo_locale.setCurrentIndex(0)
+        grid.addWidget(self.combo_locale, 0, 1)
 
-        grid.addWidget(QLabel("Username:"), 1, 0)
-        self.input_username = QLineEdit()
-        self.input_username.setText("arda")
-        grid.addWidget(self.input_username, 1, 1)
+        # Timezone
+        grid.addWidget(QLabel("Timezone:"), 1, 0)
+        self.combo_timezone = QComboBox()
+        for region, zones in TIMEZONES.items():
+            for tz in zones:
+                self.combo_timezone.addItem(tz, tz)
+        # Try to auto-detect timezone
+        self._autodetect_timezone()
+        grid.addWidget(self.combo_timezone, 1, 1)
 
-        grid.addWidget(QLabel("Computer Name (Hostname):"), 2, 0)
-        self.input_hostname = QLineEdit()
-        self.input_hostname.setText("twilight-pc")
-        grid.addWidget(self.input_hostname, 2, 1)
-
-        grid.addWidget(QLabel("User Password:"), 3, 0)
-        self.input_password = QLineEdit()
-        self.input_password.setEchoMode(QLineEdit.EchoMode.Password)
-        grid.addWidget(self.input_password, 3, 1)
-
-        self.chk_wheel = QCheckBox("Grant sudo / administrator rights (wheel group)")
-        self.chk_wheel.setChecked(True)
-        grid.addWidget(self.chk_wheel, 4, 1)
+        # Keyboard layout
+        grid.addWidget(QLabel("Keyboard Layout:"), 2, 0)
+        self.combo_keyboard = QComboBox()
+        for code, name in KEYBOARD_LAYOUTS:
+            self.combo_keyboard.addItem(f"{name}  [{code}]", code)
+        self.combo_keyboard.setCurrentIndex(0)
+        grid.addWidget(self.combo_keyboard, 2, 1)
 
         layout.addLayout(grid)
-        layout.addStretch()
-        self.tabs.addTab(tab, "3. User Account")
 
-    def setup_software_tab(self):
+        hint = QLabel(
+            "<p style='color: #a6adc8; font-size: 12px;'>"
+            "💡 The installer will auto-detect your timezone when possible. "
+            "You can override it manually above.</p>"
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        layout.addStretch()
+        self.tabs.addTab(tab, "2. Locale")
+
+    def _autodetect_timezone(self):
+        """Try to detect the current timezone."""
+        try:
+            tz_link = os.readlink("/etc/localtime")
+            if "/zoneinfo/" in tz_link:
+                tz = tz_link.split("/zoneinfo/", 1)[1]
+                idx = self.combo_timezone.findData(tz)
+                if idx >= 0:
+                    self.combo_timezone.setCurrentIndex(idx)
+                    return
+        except (OSError, IndexError):
+            pass
+
+    # ── Tab 3: Disk ─────────────────────────────────────────────────────────
+
+    def _setup_disk_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        header = QLabel(
-            "<h3>Curated Software Suite</h3>"
-            "<p>Select the applications you would like to include with Twilight OS:</p>"
+        layout.addWidget(QLabel(
+            "<h3>Storage & Partitioning</h3>"
+            "<p>Select the target drive for Twilight OS installation:</p>"
+        ))
+
+        self.disk_combo = QComboBox()
+        self._populate_disks()
+        layout.addWidget(self.disk_combo)
+
+        btn_row = QHBoxLayout()
+        btn_refresh = QPushButton("🔄 Refresh")
+        btn_refresh.setObjectName("secondaryBtn")
+        btn_refresh.clicked.connect(self._populate_disks)
+        btn_row.addWidget(btn_refresh)
+
+        btn_partitioner = QPushButton("🔧 Partition Manager")
+        btn_partitioner.setObjectName("secondaryBtn")
+        btn_partitioner.clicked.connect(self._launch_partitioner)
+        btn_row.addWidget(btn_partitioner)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        # Disk details
+        self.disk_details = QLabel("")
+        self.disk_details.setWordWrap(True)
+        self.disk_details.setStyleSheet("color: #a6adc8; font-size: 12px; padding: 8px;")
+        layout.addWidget(self.disk_details)
+        self.disk_combo.currentIndexChanged.connect(self._update_disk_details)
+
+        warn = QLabel(
+            "<p style='color: #f38ba8;'>"
+            "⚠️ <b>Warning:</b> The selected drive will be completely erased during installation. "
+            "Make sure you have backed up all important data!</p>"
         )
-        layout.addWidget(header)
+        warn.setWordWrap(True)
+        layout.addWidget(warn)
+
+        layout.addStretch()
+        self.tabs.addTab(tab, "3. Storage")
+
+    def _populate_disks(self):
+        self.disk_combo.clear()
+        try:
+            output = subprocess.check_output(
+                ["lsblk", "-d", "-n", "-o", "NAME,SIZE,MODEL,TYPE"],
+                text=True, timeout=10, stderr=subprocess.DEVNULL
+            )
+            found = False
+            for line in output.strip().split("\n"):
+                if not line.strip():
+                    continue
+                parts = line.split()
+                name = parts[0]
+                if parts[-1] != "disk":
+                    continue
+                if name.startswith(("loop", "airoot", "sr", "ram", "zram")):
+                    continue
+                size = parts[1] if len(parts) > 1 else "?"
+                model = " ".join(parts[2:-1]) if len(parts) > 3 else "Unknown"
+                self.disk_combo.addItem(
+                    f"/dev/{name}  •  {size}  •  {model}",
+                    f"/dev/{name}"
+                )
+                found = True
+            if not found:
+                self.disk_combo.addItem("(No drives detected)", "")
+        except Exception:
+            self.disk_combo.addItem("(Error detecting drives)", "")
+        self._update_disk_details()
+
+    def _update_disk_details(self):
+        disk = self.disk_combo.currentData()
+        if not disk:
+            self.disk_details.setText("")
+            return
+        try:
+            output = subprocess.check_output(
+                ["lsblk", "-n", "-o", "NAME,SIZE,FSTYPE,MOUNTPOINT", disk],
+                text=True, timeout=10, stderr=subprocess.DEVNULL
+            )
+            self.disk_details.setText(f"<pre>{output.strip()}</pre>")
+        except Exception:
+            self.disk_details.setText("")
+
+    def _launch_partitioner(self):
+        for tool in ["partitionmanager", "gparted"]:
+            if shutil.which(tool):
+                try:
+                    subprocess.Popen(["sudo", tool])
+                except Exception as e:
+                    QMessageBox.warning(self, "Error", f"Failed to launch {tool}: {e}")
+                return
+        QMessageBox.warning(
+            self, "Partition Manager",
+            "No partition manager found.\n\n"
+            "Both 'partitionmanager' and 'gparted' are missing.\n"
+            "Use 'sudo cfdisk /dev/sdX' in a terminal instead."
+        )
+
+    # ── Tab 4: User Account ─────────────────────────────────────────────────
+
+    def _setup_user_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        layout.addWidget(QLabel("<h3>User & Machine Configuration</h3>"))
+
+        grid = QGridLayout()
+        grid.setSpacing(12)
+        grid.setColumnStretch(1, 1)
+
+        # Full name
+        grid.addWidget(QLabel("Full Name:"), 0, 0)
+        self.input_realname = QLineEdit()
+        self.input_realname.setPlaceholderText("e.g. Arda")
+        grid.addWidget(self.input_realname, 0, 1)
+
+        # Username
+        grid.addWidget(QLabel("Username:"), 1, 0)
+        self.input_username = QLineEdit()
+        self.input_username.setPlaceholderText("lowercase letters, numbers, dash, underscore")
+        self.input_username.setMaxLength(32)
+        grid.addWidget(self.input_username, 1, 1)
+
+        self.username_hint = QLabel("")
+        self.username_hint.setStyleSheet("font-size: 11px;")
+        grid.addWidget(self.username_hint, 2, 1)
+        self.input_username.textChanged.connect(self._validate_username_live)
+
+        # Hostname
+        grid.addWidget(QLabel("Hostname:"), 3, 0)
+        self.input_hostname = QLineEdit()
+        self.input_hostname.setPlaceholderText("e.g. twilight-pc")
+        self.input_hostname.setMaxLength(63)
+        grid.addWidget(self.input_hostname, 3, 1)
+
+        # Password
+        grid.addWidget(QLabel("Password:"), 4, 0)
+        self.input_password = QLineEdit()
+        self.input_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_password.setPlaceholderText("Enter a strong password")
+        grid.addWidget(self.input_password, 4, 1)
+
+        # Confirm
+        grid.addWidget(QLabel("Confirm Password:"), 5, 0)
+        self.input_password_confirm = QLineEdit()
+        self.input_password_confirm.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_password_confirm.setPlaceholderText("Re-enter your password")
+        grid.addWidget(self.input_password_confirm, 5, 1)
+
+        self.password_hint = QLabel("")
+        self.password_hint.setStyleSheet("font-size: 11px;")
+        grid.addWidget(self.password_hint, 6, 1)
+        self.input_password_confirm.textChanged.connect(self._validate_password_live)
+        self.input_password.textChanged.connect(self._validate_password_live)
+
+        # Sudo
+        self.chk_wheel = QCheckBox("Grant sudo / administrator rights (wheel group)")
+        self.chk_wheel.setChecked(True)
+        grid.addWidget(self.chk_wheel, 7, 1)
+
+        # Root password
+        self.chk_root_same = QCheckBox("Use same password for root account")
+        self.chk_root_same.setChecked(True)
+        grid.addWidget(self.chk_root_same, 8, 1)
+
+        layout.addLayout(grid)
+        layout.addStretch()
+        self.tabs.addTab(tab, "4. User")
+
+    def _validate_username_live(self, text):
+        text = text.strip()
+        if not text:
+            self.username_hint.setText("")
+            return
+        if USERNAME_RE.match(text):
+            self.username_hint.setStyleSheet("color: #a6e3a1; font-size: 11px;")
+            self.username_hint.setText("✓ Valid username")
+        else:
+            self.username_hint.setStyleSheet("color: #f38ba8; font-size: 11px;")
+            self.username_hint.setText("✗ Must start with letter/underscore, only a-z 0-9 _ -")
+
+    def _validate_password_live(self):
+        pw = self.input_password.text()
+        confirm = self.input_password_confirm.text()
+        if not pw and not confirm:
+            self.password_hint.setText("")
+            return
+        if pw and len(pw) < 4:
+            self.password_hint.setStyleSheet("color: #fab387; font-size: 11px;")
+            self.password_hint.setText("⚠ Password is very short")
+        elif pw and confirm and pw != confirm:
+            self.password_hint.setStyleSheet("color: #f38ba8; font-size: 11px;")
+            self.password_hint.setText("✗ Passwords do not match")
+        elif pw and confirm and pw == confirm:
+            self.password_hint.setStyleSheet("color: #a6e3a1; font-size: 11px;")
+            self.password_hint.setText("✓ Passwords match")
+        else:
+            self.password_hint.setText("")
+
+    # ── Tab 5: Software ─────────────────────────────────────────────────────
+
+    def _setup_software_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        header_row = QHBoxLayout()
+        header_row.addWidget(QLabel(
+            "<h3>Curated Software Suite</h3>"
+        ))
+        header_row.addStretch()
+
+        self.pkg_count_label = QLabel("")
+        self.pkg_count_label.setStyleSheet("color: #89b4fa; font-size: 12px;")
+        header_row.addWidget(self.pkg_count_label)
+        layout.addLayout(header_row)
+
+        layout.addWidget(QLabel(
+            "<p>Select the applications to install after base system setup:</p>"
+        ))
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setSpacing(4)
 
         for category, apps in SOFTWARE_CATEGORIES.items():
             box = QGroupBox(category)
             box_layout = QVBoxLayout(box)
-            
-            # Select / Deselect All
+            box_layout.setSpacing(4)
+
+            chk_list = []
+            for pkg, name, default in apps:
+                chk = QCheckBox(f"{name}  ({pkg})")
+                chk.setChecked(default)
+                chk.stateChanged.connect(self._update_pkg_count)
+                box_layout.addWidget(chk)
+                self.checkboxes[pkg] = chk
+                chk_list.append(chk)
+
             btn_row = QHBoxLayout()
             b_all = QPushButton("Select All")
             b_all.setObjectName("secondaryBtn")
             b_none = QPushButton("Clear")
             b_none.setObjectName("secondaryBtn")
-            
-            chk_list = []
-            for pkg, name, default in apps:
-                chk = QCheckBox(f"{name} ({pkg})")
-                chk.setChecked(default)
-                box_layout.addWidget(chk)
-                self.checkboxes[pkg] = chk
-                chk_list.append(chk)
-
-            b_all.clicked.connect(lambda _, l=chk_list: [c.setChecked(True) for c in l])
-            b_none.clicked.connect(lambda _, l=chk_list: [c.setChecked(False) for c in l])
+            b_all.clicked.connect(lambda _, cl=chk_list: [c.setChecked(True) for c in cl])
+            b_none.clicked.connect(lambda _, cl=chk_list: [c.setChecked(False) for c in cl])
             btn_row.addWidget(b_all)
             btn_row.addWidget(b_none)
             btn_row.addStretch()
@@ -417,45 +976,118 @@ class InstallerWindow(QMainWindow):
 
         scroll.setWidget(scroll_content)
         layout.addWidget(scroll)
-        self.tabs.addTab(tab, "4. Software (50 Apps)")
+        self._update_pkg_count()
+        self.tabs.addTab(tab, "5. Software")
 
-    def setup_drivers_tab(self):
+    def _update_pkg_count(self):
+        count = sum(1 for chk in self.checkboxes.values() if chk.isChecked())
+        self.pkg_count_label.setText(f"{count} packages selected")
+
+    # ── Tab 6: Drivers ──────────────────────────────────────────────────────
+
+    def _setup_drivers_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        layout.addWidget(QLabel("<h3>Universal Graphics Drivers</h3><p>Choose GPU drivers for your hardware:</p>"))
+        layout.addWidget(QLabel(
+            "<h3>Graphics Drivers & Extras</h3>"
+            "<p>Select GPU drivers to install on the target system:</p>"
+        ))
 
-        self.chk_nvidia = QCheckBox("Universal NVIDIA Open Driver (nvidia-open, nvidia-utils, settings)")
-        self.chk_nvidia.setChecked(True)
-        layout.addWidget(self.chk_nvidia)
+        # Auto-detect GPU
+        gpu_info = self._detect_gpu()
+        if gpu_info:
+            detect_label = QLabel(f"<p style='color: #a6e3a1;'>🔍 Detected GPU: <b>{gpu_info}</b></p>")
+            detect_label.setWordWrap(True)
+            layout.addWidget(detect_label)
 
-        self.chk_amd = QCheckBox("AMD Radeon Vulkan & OpenGL (mesa, vulkan-radeon, xf86-video-amdgpu)")
-        self.chk_amd.setChecked(True)
-        layout.addWidget(self.chk_amd)
+        driver_box = QGroupBox("GPU Drivers")
+        driver_layout = QVBoxLayout(driver_box)
 
-        self.chk_intel = QCheckBox("Intel Graphics Media Driver (vulkan-intel, intel-media-driver)")
-        self.chk_intel.setChecked(True)
-        layout.addWidget(self.chk_intel)
+        self.chk_nvidia = QCheckBox(
+            "NVIDIA Open Driver  (nvidia-open, nvidia-utils, nvidia-settings, nvidia-prime)"
+        )
+        self.chk_nvidia.setChecked("nvidia" in gpu_info.lower() if gpu_info else False)
+        driver_layout.addWidget(self.chk_nvidia)
 
-        self.chk_flatpak = QCheckBox("Enable Flatpak & Flathub Support (for Spotify, Heroic, Joplin)")
+        self.chk_amd = QCheckBox(
+            "AMD Radeon  (mesa, vulkan-radeon, xf86-video-amdgpu, libva-mesa-driver)"
+        )
+        self.chk_amd.setChecked("amd" in gpu_info.lower() if gpu_info else True)
+        driver_layout.addWidget(self.chk_amd)
+
+        self.chk_intel = QCheckBox(
+            "Intel Graphics  (vulkan-intel, intel-media-driver)"
+        )
+        self.chk_intel.setChecked("intel" in gpu_info.lower() if gpu_info else True)
+        driver_layout.addWidget(self.chk_intel)
+
+        layout.addWidget(driver_box)
+
+        extras_box = QGroupBox("Extras")
+        extras_layout = QVBoxLayout(extras_box)
+
+        self.chk_flatpak = QCheckBox("Enable Flatpak & Flathub  (for Spotify, Heroic, Joplin)")
         self.chk_flatpak.setChecked(True)
-        layout.addWidget(self.chk_flatpak)
+        extras_layout.addWidget(self.chk_flatpak)
+
+        self.chk_multilib = QCheckBox("Enable multilib repository  (32-bit compatibility, required for Steam/Wine)")
+        self.chk_multilib.setChecked(True)
+        extras_layout.addWidget(self.chk_multilib)
+
+        layout.addWidget(extras_box)
+
+        note = QLabel(
+            "<p style='color: #a6adc8; font-style: italic; font-size: 12px;'>"
+            "💡 If unsure about your GPU, keep AMD & Intel checked — they use open-source "
+            "drivers and work universally. Check NVIDIA only if you have an NVIDIA card.</p>"
+        )
+        note.setWordWrap(True)
+        layout.addWidget(note)
 
         layout.addStretch()
-        self.tabs.addTab(tab, "5. Drivers & Extras")
+        self.tabs.addTab(tab, "6. Drivers")
 
-    def setup_install_tab(self):
+    def _detect_gpu(self) -> str:
+        """Try to detect GPU hardware."""
+        try:
+            output = subprocess.check_output(
+                ["lspci", "-nn"], text=True, timeout=10, stderr=subprocess.DEVNULL
+            )
+            gpus = []
+            for line in output.split("\n"):
+                if "VGA" in line or "3D" in line or "Display" in line:
+                    # Extract the description part
+                    parts = line.split(": ", 1)
+                    if len(parts) > 1:
+                        gpus.append(parts[1].strip())
+            return " | ".join(gpus) if gpus else ""
+        except Exception:
+            return ""
+
+    # ── Tab 7: Install ──────────────────────────────────────────────────────
+
+    def _setup_install_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        lbl = QLabel(
-            "<h2>Ready to Install Twilight OS!</h2>"
-            "<p>Click the button below to start the installation. "
-            "Your drive will be partitioned and formatted, and selected packages will be installed.</p>"
-        )
-        lbl.setWordWrap(True)
-        layout.addWidget(lbl)
+        layout.addWidget(QLabel(
+            "<h2 style='color: #cba6f7;'>Review & Install</h2>"
+            "<p>Review your choices below, then click Install to begin.</p>"
+        ))
 
+        # Summary text area
+        self.summary_text = QTextEdit()
+        self.summary_text.setReadOnly(True)
+        self.summary_text.setMaximumHeight(220)
+        layout.addWidget(self.summary_text)
+
+        btn_refresh_summary = QPushButton("🔄 Refresh Summary")
+        btn_refresh_summary.setObjectName("secondaryBtn")
+        btn_refresh_summary.clicked.connect(self._update_summary)
+        layout.addWidget(btn_refresh_summary)
+
+        # Progress
         self.progress = QProgressBar()
         self.progress.setValue(0)
         self.progress.setVisible(False)
@@ -463,52 +1095,260 @@ class InstallerWindow(QMainWindow):
 
         self.status_lbl = QLabel("")
         self.status_lbl.setStyleSheet("color: #a6adc8; font-style: italic;")
+        self.status_lbl.setWordWrap(True)
         layout.addWidget(self.status_lbl)
 
         layout.addStretch()
 
-        self.btn_install = QPushButton("🚀 Install Twilight OS Now")
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+
+        self.btn_install = QPushButton("🚀 Install Twilight OS")
         self.btn_install.setObjectName("installBtn")
-        self.btn_install.clicked.connect(self.start_installation)
-        layout.addWidget(self.btn_install, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.btn_install.clicked.connect(self._start_installation)
+        btn_row.addWidget(self.btn_install)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
 
         layout.addStretch()
-        self.tabs.addTab(tab, "6. Install")
+        self.tabs.addTab(tab, "7. Install")
 
-    def start_installation(self):
-        selected_pkgs = [pkg for pkg, chk in self.checkboxes.items() if chk.isChecked()]
-        target_disk = self.disk_combo.currentData() or "/dev/sda"
-        username = self.input_username.text().strip() or "arda"
-        hostname = self.input_hostname.text().strip() or "twilight-pc"
-
-        reply = QMessageBox.question(
-            self,
-            "Confirm Installation",
-            f"Are you ready to install Twilight OS onto {target_disk}?\n\n"
-            f"Username: {username}\n"
-            f"Hostname: {hostname}\n"
-            f"Selected applications: {len(selected_pkgs)} packages\n\n"
-            "ALL EXISTING DATA ON THE TARGET DISK WILL BE OVERWRITTEN!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        # Populate summary on first view
+        self.tabs.currentChanged.connect(
+            lambda i: self._update_summary() if i == self.tabs.count() - 1 else None
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
-            self.btn_install.setEnabled(False)
-            self.progress.setVisible(True)
-            self.progress.setRange(0, 0) # Pulsing progress
-            self.status_lbl.setText("Starting guided installation process...")
-            
-            # Launch terminal installation session with the configured packages
-            pkg_str = " ".join(selected_pkgs)
-            cmd = f"konsole -e bash -c 'echo \"Starting Twilight OS Installation...\"; archinstall; echo \"Press enter to exit\"; read'"
-            subprocess.Popen(cmd, shell=True)
+    def _update_summary(self):
+        """Build a human-readable summary of all installation choices."""
+        selected_pkgs = [pkg for pkg, chk in self.checkboxes.items() if chk.isChecked()]
+        drivers = []
+        if self.chk_nvidia.isChecked():
+            drivers.append("NVIDIA")
+        if self.chk_amd.isChecked():
+            drivers.append("AMD")
+        if self.chk_intel.isChecked():
+            drivers.append("Intel")
 
+        summary = textwrap.dedent(f"""\
+            ╔══════════════════════════════════════════════════╗
+            ║         Twilight OS Installation Summary         ║
+            ╚══════════════════════════════════════════════════╝
+
+            Locale:     {self.combo_locale.currentData() or 'en_US.UTF-8'}
+            Timezone:   {self.combo_timezone.currentData() or 'UTC'}
+            Keyboard:   {self.combo_keyboard.currentData() or 'us'}
+
+            Target:     {self.disk_combo.currentData() or '(none selected)'}
+
+            Full Name:  {self.input_realname.text().strip() or '(not set)'}
+            Username:   {self.input_username.text().strip() or '(not set)'}
+            Hostname:   {self.input_hostname.text().strip() or '(not set)'}
+            Sudo:       {'Yes' if self.chk_wheel.isChecked() else 'No'}
+
+            Packages:   {len(selected_pkgs)} selected
+            Drivers:    {', '.join(drivers) or 'None'}
+            Flatpak:    {'Yes' if self.chk_flatpak.isChecked() else 'No'}
+            Multilib:   {'Yes' if self.chk_multilib.isChecked() else 'No'}
+
+            ─────────────────────────────────────────────────
+            Selected Packages:
+            {chr(10).join(f'  • {p}' for p in selected_pkgs) or '  (none)'}
+        """)
+        self.summary_text.setText(summary)
+
+    def _build_config(self) -> dict:
+        """Collect all user choices into a config dict."""
+        selected_pkgs = [pkg for pkg, chk in self.checkboxes.items() if chk.isChecked()]
+        drivers = []
+        if self.chk_nvidia.isChecked():
+            drivers.append("nvidia")
+        if self.chk_amd.isChecked():
+            drivers.append("amd")
+        if self.chk_intel.isChecked():
+            drivers.append("intel")
+
+        return {
+            "version": VERSION,
+            "locale": self.combo_locale.currentData() or "en_US.UTF-8",
+            "timezone": self.combo_timezone.currentData() or "UTC",
+            "keyboard": self.combo_keyboard.currentData() or "us",
+            "disk": self.disk_combo.currentData() or "",
+            "realname": self.input_realname.text().strip(),
+            "username": self.input_username.text().strip(),
+            "hostname": self.input_hostname.text().strip(),
+            "password": self.input_password.text(),
+            "sudo": self.chk_wheel.isChecked(),
+            "root_same_password": self.chk_root_same.isChecked(),
+            "packages": selected_pkgs,
+            "drivers": drivers,
+            "flatpak": self.chk_flatpak.isChecked(),
+            "multilib": self.chk_multilib.isChecked(),
+        }
+
+    def _validate_all(self) -> list:
+        """Full validation of all user inputs."""
+        errors = []
+
+        # Username
+        username = self.input_username.text().strip()
+        if not username:
+            errors.append("Username is required.")
+        elif not USERNAME_RE.match(username):
+            errors.append("Username must start with a letter or underscore, "
+                          "and contain only lowercase a-z, 0-9, dash, or underscore.")
+
+        # Hostname
+        hostname = self.input_hostname.text().strip()
+        if not hostname:
+            errors.append("Hostname is required.")
+        elif not HOSTNAME_RE.match(hostname):
+            errors.append("Hostname must be 1-63 characters, letters/numbers/hyphens only, "
+                          "cannot start or end with a hyphen.")
+
+        # Password
+        pw = self.input_password.text()
+        confirm = self.input_password_confirm.text()
+        if not pw:
+            errors.append("Password is required.")
+        elif len(pw) < 4:
+            errors.append("Password must be at least 4 characters.")
+        elif pw != confirm:
+            errors.append("Passwords do not match.")
+
+        # Disk
+        disk = self.disk_combo.currentData()
+        if not disk:
+            errors.append("No target disk selected.")
+
+        return errors
+
+    def _start_installation(self):
+        errors = self._validate_all()
+        if errors:
+            QMessageBox.warning(
+                self, "Cannot Proceed",
+                "Please fix the following issues before installing:\n\n• "
+                + "\n• ".join(errors)
+            )
+            return
+
+        config = self._build_config()
+
+        reply = QMessageBox.warning(
+            self,
+            "⚠️ Confirm Installation",
+            f"You are about to install Twilight OS.\n\n"
+            f"Target Disk: {config['disk']}\n"
+            f"Username: {config['username']}\n"
+            f"Hostname: {config['hostname']}\n"
+            f"Packages: {len(config['packages'])} apps + "
+            f"{', '.join(d.upper() for d in config['drivers']) or 'no'} drivers\n\n"
+            "⚠️ ALL DATA ON THE TARGET DISK WILL BE PERMANENTLY ERASED.\n\n"
+            "Are you absolutely sure you want to continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Disable UI during installation
+        self.btn_install.setEnabled(False)
+        self.btn_next.setEnabled(False)
+        self.btn_back.setEnabled(False)
+        self.progress.setVisible(True)
+        self.progress.setRange(0, 0)  # Pulsing
+        self.status_lbl.setText("Preparing installation...")
+
+        # Start worker thread
+        self.worker = InstallWorker(config)
+        self.worker.progress.connect(self._on_install_progress)
+        self.worker.log_output.connect(self._on_install_log)
+        self.worker.finished_ok.connect(self._on_install_success)
+        self.worker.finished_err.connect(self._on_install_error)
+        self.worker.start()
+
+    def _on_install_progress(self, msg):
+        self.status_lbl.setText(msg)
+
+    def _on_install_log(self, line):
+        self.summary_text.append(line)
+
+    def _on_install_success(self):
+        self.progress.setRange(0, 100)
+        self.progress.setValue(100)
+        self.status_lbl.setText("Configuration saved! Launching archinstall...")
+
+        # Launch archinstall in a terminal emulator
+        terminal = shutil.which("konsole") or shutil.which("xterm")
+        config = self._build_config()
+        target_disk = config.get("disk", "")
+        finalize_bin = "/usr/local/bin/twilight-finalize-install"
+
+        if terminal:
+            install_cmd = (
+                "echo '╔════════════════════════════════════════════════════════════╗'; "
+                "echo '║           🌌 Twilight OS Guided Installation               ║'; "
+                "echo '╚════════════════════════════════════════════════════════════╝'; echo ''; "
+                "echo 'Step 1/2: Running Arch Linux guided installer (archinstall)...'; echo ''; "
+                "archinstall; "
+                "echo ''; echo 'Step 2/2: Finalizing Twilight OS customizations...'; "
+                f"if [ -x {finalize_bin} ]; then "
+                f"  sudo {finalize_bin} '{target_disk}'; "
+                "fi; "
+                "echo ''; echo '════════════════════════════════════════════════════'; "
+                "echo '  🎉 Twilight OS installation is complete!'; "
+                "echo '  You can now close this window and restart your PC.'; "
+                "echo '════════════════════════════════════════════════════'; "
+                "echo 'Press Enter to exit...'; read"
+            )
+            try:
+                subprocess.Popen([terminal, "-e", "bash", "-c", install_cmd])
+                self.status_lbl.setText(
+                    "✅ Installer terminal launched. Follow the on-screen prompts.\n"
+                    "Twilight OS branding, desktop settings, and all selected packages\n"
+                    "will be automatically finalized upon completion."
+                )
+            except Exception as e:
+                self._on_install_error(f"Failed to launch terminal: {e}")
+        else:
+            self._on_install_error("No terminal emulator (konsole or xterm) found.")
+
+    def _on_install_error(self, error):
+        self.progress.setVisible(False)
+        self.btn_install.setEnabled(True)
+        self.btn_next.setEnabled(True)
+        self.btn_back.setEnabled(True)
+        self.status_lbl.setStyleSheet("color: #f38ba8; font-style: italic;")
+        self.status_lbl.setText(f"❌ Error: {error}")
+        QMessageBox.critical(self, "Installation Error", f"An error occurred:\n\n{error}")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Entry Point
+# ──────────────────────────────────────────────────────────────────────────────
 
 def main():
+    # Check if we're running as root (needed for installation)
+    if os.geteuid() != 0:
+        # Try to re-launch with sudo
+        print("Twilight OS Setup Assistant requires root privileges.")
+        print("Attempting to re-launch with sudo...")
+        try:
+            os.execvp("sudo", ["sudo", sys.executable] + sys.argv)
+        except Exception:
+            print("Failed to elevate privileges. Please run with: sudo twilight-installer-gui")
+            sys.exit(1)
+
     app = QApplication(sys.argv)
+    app.setApplicationName("Twilight OS Setup Assistant")
+    app.setApplicationVersion(VERSION)
+
     window = InstallerWindow()
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

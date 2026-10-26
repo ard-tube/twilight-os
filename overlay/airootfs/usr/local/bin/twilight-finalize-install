@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Twilight OS — Target System Customizer & Finalizer
+# Applies Twilight OS branding, wallpapers, KDE configurations, dotfiles,
+# curated packages, GPU drivers, and system services to the target installation.
+# ==============================================================================
+set -euo pipefail
+
+PURPLE='\033[0;35m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+CONF_FILE="/tmp/twilight-install.conf"
+MOUNT_POINT="/mnt/twilight-target"
+NEED_UMOUNT=0
+
+log_info()    { echo -e "${CYAN}→ $1${NC}"; }
+log_success() { echo -e "${GREEN}✓ $1${NC}"; }
+log_warn()    { echo -e "${YELLOW}⚠ $1${NC}"; }
+log_error()   { echo -e "${RED}✗ $1${NC}"; }
+
+# Must run as root
+if [[ $EUID -ne 0 ]]; then
+    log_error "This script must be run as root."
+    exit 1
+fi
+
+echo -e "${PURPLE}"
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║          Twilight OS Post-Installation Finalizer           ║"
+echo "╚════════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Locate Target Root Filesystem
+# ──────────────────────────────────────────────────────────────────────────────
+TARGET=""
+
+# Check if an explicit target was passed as $1
+if [[ -n "${1:-}" && -d "$1/etc" ]]; then
+    TARGET="$1"
+    log_info "Using provided target directory: $TARGET"
+# Check if /mnt/archinstall is still mounted
+elif [[ -d "/mnt/archinstall/etc" ]] && mountpoint -q /mnt/archinstall; then
+    TARGET="/mnt/archinstall"
+    log_info "Detected active archinstall mount at $TARGET"
+# Check if standard /mnt is mounted
+elif [[ -d "/mnt/etc" ]] && mountpoint -q /mnt; then
+    TARGET="/mnt"
+    log_info "Detected mounted target at $TARGET"
+else
+    # Try to find target disk from config or argument
+    TARGET_DISK=""
+    if [[ -n "${1:-}" && -b "$1" ]]; then
+        TARGET_DISK="$1"
+    elif [[ -f "$CONF_FILE" ]]; then
+        TARGET_DISK=$(python3 -c "import json; conf=json.load(open('$CONF_FILE')); print(conf.get('disk',''))" 2>/dev/null || true)
+    fi
+
+    if [[ -n "$TARGET_DISK" && -b "$TARGET_DISK" ]]; then
+        log_info "Attempting to locate Linux root partition on $TARGET_DISK..."
+        mkdir -p "$MOUNT_POINT"
+
+        # List candidate partitions on the disk
+        CANDIDATES=$(lsblk -rn -o PATH,TYPE "$TARGET_DISK" | awk '$2=="part" {print $1}')
+        ROOT_PART=""
+
+        for part in $CANDIDATES; do
+            FSTYPE=$(lsblk -rn -o FSTYPE "$part" 2>/dev/null || true)
+            if [[ "$FSTYPE" =~ ^(ext4|btrfs|xfs|f2fs)$ ]]; then
+                # Probe mount to verify if it has /etc/fstab or /etc
+                if [[ "$FSTYPE" == "btrfs" ]]; then
+                    # Try mounting @ subvolume first, then root
+                    if mount -o subvol=@ "$part" "$MOUNT_POINT" 2>/dev/null || mount "$part" "$MOUNT_POINT" 2>/dev/null; then
+                        if [[ -d "$MOUNT_POINT/etc" ]]; then
+                            ROOT_PART="$part"
+                            TARGET="$MOUNT_POINT"
+                            NEED_UMOUNT=1
+                            break
+                        fi
+                        umount "$MOUNT_POINT" 2>/dev/null || true
+                    fi
+                else
+                    if mount "$part" "$MOUNT_POINT" 2>/dev/null; then
+                        if [[ -d "$MOUNT_POINT/etc" ]]; then
+                            ROOT_PART="$part"
+                            TARGET="$MOUNT_POINT"
+                            NEED_UMOUNT=1
+                            break
+                        fi
+                        umount "$MOUNT_POINT" 2>/dev/null || true
+                    fi
+                fi
+            fi
+        done
+
+        if [[ -z "$ROOT_PART" ]]; then
+            log_error "Could not find a valid Linux root partition on $TARGET_DISK."
+            exit 1
+        fi
+        log_success "Mounted root partition $ROOT_PART at $TARGET"
+    else
+        log_error "No mounted installation or target disk found."
+        log_warn "If your install is mounted elsewhere, pass it: $0 /path/to/mount"
+        exit 1
+    fi
+fi
+
+# Cleanup trap to ensure clean unmounting
+cleanup() {
+    if [[ $NEED_UMOUNT -eq 1 && -d "$MOUNT_POINT" ]]; then
+        log_info "Unmounting $MOUNT_POINT..."
+        umount -R "$MOUNT_POINT" 2>/dev/null || true
+        rmdir "$MOUNT_POINT" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. Copy Twilight OS Branding, Artwork & Presets
+# ──────────────────────────────────────────────────────────────────────────────
+log_info "Copying Twilight OS branding, themes & artwork to target..."
+
+# Wallpapers
+if [[ -d /usr/share/wallpapers/Twilight ]]; then
+    mkdir -p "$TARGET/usr/share/wallpapers"
+    cp -r /usr/share/wallpapers/Twilight "$TARGET/usr/share/wallpapers/"
+    log_success "Installed 5K Twilight Horizon wallpaper"
+fi
+
+# SDDM Login Theme Presets
+if [[ -f /usr/share/sddm/themes/breeze/theme.conf.user ]]; then
+    mkdir -p "$TARGET/usr/share/sddm/themes/breeze"
+    cp /usr/share/sddm/themes/breeze/theme.conf.user "$TARGET/usr/share/sddm/themes/breeze/"
+fi
+
+# Twilight Brand Assets & Fastfetch
+if [[ -d /usr/share/twilight ]]; then
+    mkdir -p "$TARGET/usr/share/twilight"
+    cp -r /usr/share/twilight/. "$TARGET/usr/share/twilight/"
+fi
+
+# Pacman Hook & Branding Script
+if [[ -f /etc/pacman.d/hooks/99-twilight-branding.hook ]]; then
+    mkdir -p "$TARGET/etc/pacman.d/hooks"
+    cp /etc/pacman.d/hooks/99-twilight-branding.hook "$TARGET/etc/pacman.d/hooks/"
+fi
+
+if [[ -f /usr/local/bin/apply-twilight-branding ]]; then
+    mkdir -p "$TARGET/usr/local/bin"
+    cp /usr/local/bin/apply-twilight-branding "$TARGET/usr/local/bin/"
+    chmod 755 "$TARGET/usr/local/bin/apply-twilight-branding"
+fi
+
+# Apply branding in target
+if [[ -x "$TARGET/usr/local/bin/apply-twilight-branding" ]]; then
+    arch-chroot "$TARGET" /usr/local/bin/apply-twilight-branding || true
+fi
+
+# Default User Skel (KDE Plasma configs, fastfetch, bashrc)
+if [[ -d /etc/skel/.config ]]; then
+    mkdir -p "$TARGET/etc/skel/.config"
+    cp -r /etc/skel/.config/. "$TARGET/etc/skel/.config/"
+fi
+if [[ -f /usr/share/twilight/branding/bashrc ]]; then
+    cp /usr/share/twilight/branding/bashrc "$TARGET/etc/skel/.bashrc"
+fi
+
+# Deploy dotfiles to all created user accounts in target /home/
+if [[ -d "$TARGET/home" ]]; then
+    for userdir in "$TARGET/home"/*; do
+        if [[ -d "$userdir" && "$(basename "$userdir")" != "lost+found" && "$(basename "$userdir")" != "liveuser" ]]; then
+            username=$(basename "$userdir")
+            log_info "Configuring Twilight desktop presets for user: $username"
+
+            mkdir -p "$userdir/.config"
+            if [[ -d "$TARGET/etc/skel/.config" ]]; then
+                cp -r "$TARGET/etc/skel/.config/." "$userdir/.config/"
+            fi
+            if [[ -f "$TARGET/etc/skel/.bashrc" ]]; then
+                cp "$TARGET/etc/skel/.bashrc" "$userdir/.bashrc"
+            fi
+
+            # Fix permissions
+            arch-chroot "$TARGET" chown -R "$username:$username" "/home/$username" 2>/dev/null || true
+        fi
+    done
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Read Configuration File (if available)
+# ──────────────────────────────────────────────────────────────────────────────
+PKGS=()
+DRIVERS=()
+ENABLE_FLATPAK="yes"
+ENABLE_MULTILIB="yes"
+
+if [[ -f "$CONF_FILE" ]]; then
+    log_info "Reading installation options from $CONF_FILE..."
+    
+    # Read multilib preference
+    ML=$(python3 -c "import json; conf=json.load(open('$CONF_FILE')); print('yes' if conf.get('multilib', True) else 'no')" 2>/dev/null || echo "yes")
+    ENABLE_MULTILIB="$ML"
+
+    # Read flatpak preference
+    FP=$(python3 -c "import json; conf=json.load(open('$CONF_FILE')); print('yes' if conf.get('flatpak', True) else 'no')" 2>/dev/null || echo "yes")
+    ENABLE_FLATPAK="$FP"
+
+    # Read packages
+    while IFS= read -r pkg; do
+        [[ -n "$pkg" ]] && PKGS+=("$pkg")
+    done < <(python3 -c "import json; conf=json.load(open('$CONF_FILE')); print('\n'.join(conf.get('packages', [])))" 2>/dev/null || true)
+
+    # Read driver packages
+    while IFS= read -r drv_pkg; do
+        [[ -n "$drv_pkg" ]] && PKGS+=("$drv_pkg")
+    done < <(python3 -c "
+import json
+conf = json.load(open('$CONF_FILE'))
+driver_map = {
+    'nvidia': ['nvidia-open', 'nvidia-utils', 'nvidia-settings', 'nvidia-prime'],
+    'amd': ['mesa', 'vulkan-radeon', 'xf86-video-amdgpu', 'libva-mesa-driver'],
+    'intel': ['vulkan-intel', 'intel-media-driver']
+}
+res = []
+for d in conf.get('drivers', []):
+    res.extend(driver_map.get(d, []))
+print('\n'.join(res))
+" 2>/dev/null || true)
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Enable multilib (32-bit repo for Steam/Wine)
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ "$ENABLE_MULTILIB" == "yes" && -f "$TARGET/etc/pacman.conf" ]]; then
+    log_info "Enabling multilib repository in target pacman.conf..."
+    sed -i "/\[multilib\]/,/Include/"'s/^#//' "$TARGET/etc/pacman.conf" 2>/dev/null || true
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. Essential System Services
+# ──────────────────────────────────────────────────────────────────────────────
+log_info "Ensuring SDDM and NetworkManager are enabled..."
+arch-chroot "$TARGET" systemctl enable sddm.service NetworkManager.service 2>/dev/null || true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. Install Selected Packages into Target System
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ ${#PKGS[@]} -gt 0 ]]; then
+    log_info "Installing ${#PKGS[@]} selected packages and drivers into target system..."
+    echo -e "${CYAN}Packages to install: ${PKGS[*]}${NC}"
+
+    # Refresh repos and install packages in target chroot
+    if arch-chroot "$TARGET" pacman -Sy --noconfirm; then
+        arch-chroot "$TARGET" pacman -S --noconfirm --needed "${PKGS[@]}" || {
+            log_warn "Some packages may have failed to install. Continuing..."
+        }
+    else
+        log_warn "Target network/pacman refresh failed. Packages can be installed after reboot."
+    fi
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Flatpak Setup
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ "$ENABLE_FLATPAK" == "yes" ]]; then
+    log_info "Configuring Flatpak & Flathub..."
+    arch-chroot "$TARGET" pacman -S --noconfirm --needed flatpak 2>/dev/null || true
+    arch-chroot "$TARGET" flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+fi
+
+echo ""
+echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  ✅ Twilight OS customization finalized successfully!     ${NC}"
+echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+echo ""
