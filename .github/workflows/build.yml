@@ -33,7 +33,7 @@ jobs:
           sed -i 's/^iso_application=.*/iso_application="Twilight OS Live Environment"/' profile/profiledef.sh
 
           # 3. Aggressive SquashFS compression to stay under 2 GB
-          sed -i "s/airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M' '-Xlevel' '9')/" profile/profiledef.sh
+          sed -i "s/airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" profile/profiledef.sh
 
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux install medium/Twilight OS/g' {} + 2>/dev/null || true
           find profile/efiboot profile/syslinux -type f -exec sed -i 's/Arch Linux/Twilight OS/g' {} + 2>/dev/null || true
