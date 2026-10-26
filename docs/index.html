@@ -85,7 +85,7 @@
     <section class="hero">
         <div class="hero-glow"></div>
         <div class="container hero-content">
-            <div class="badge-pill">✨ Twilight OS Rolling Release • KDE Plasma 6 (Wayland)</div>
+            <div class="badge-pill">✨ Twilight OS v1.0 Stable • KDE Plasma 6 (Wayland)</div>
             <h1 class="hero-title">Bleeding-Edge Power.<br><span class="gradient-text">Refined Simplicity.</span></h1>
             <p class="hero-subtitle">
                 An Arch Linux based operating system tuned for speed, creators, and gamers.
@@ -107,7 +107,7 @@
                 <div class="status-item">
                     <span class="status-dot online"></span>
                     <span class="status-label">Release:</span>
-                    <span class="status-val status-success" id="releaseStatus">Done • Completed (Success) ✓</span>
+                    <span class="status-val status-success" id="releaseStatus">v1.0 Stable Released ✓</span>
                 </div>
                 <div class="status-divider"></div>
                 <div class="status-item">
@@ -117,12 +117,12 @@
                 <div class="status-divider"></div>
                 <div class="status-item">
                     <span class="status-label">Latest Tag:</span>
-                    <span class="status-val" id="releaseTag">v0.1-pre-alpha</span>
+                    <span class="status-val" id="releaseTag">v1.0 (Stable)</span>
                 </div>
                 <div class="status-divider"></div>
                 <div class="status-item">
                     <span class="status-label">Download Size:</span>
-                    <span class="status-val" id="isoSize">~2.5 GB (Ready)</span>
+                    <span class="status-val" id="isoSize">1.95 GB (Single ISO)</span>
                 </div>
             </div>
         </div>
@@ -276,26 +276,22 @@
                 
                 <div class="download-box-single">
                     <div class="download-badge-row">
-                        <span class="version-badge">v0.1 Pre-Alpha</span>
-                        <span class="arch-badge">x86_64 Live ISO (~2.5 GB)</span>
-                        <span class="status-pill-success">✓ Released</span>
+                        <span class="version-badge">v1.0 Stable</span>
+                        <span class="arch-badge">x86_64 Single Live ISO (1.95 GB)</span>
+                        <span class="status-pill-success">✓ Official Stable Release</span>
                     </div>
                     <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary btn-large">
                         <span class="btn-icon">⬇</span>
-                        <span>Download Twilight OS ISO (Release)</span>
+                        <span>Download Twilight OS v1.0 (Single ISO)</span>
                     </a>
-                    <p class="download-subtext">Direct bootable ISO from official GitHub Releases. No compiling or complex setup required.</p>
+                    <p class="download-subtext">Official bootable single-file ISO from GitHub Releases. Under 2 GB — no multi-part splitting or reassembly needed.</p>
 
                     <div class="split-guide">
-                        <div class="split-guide-title">💡 How to combine the release files:</div>
-                        <p class="split-guide-desc">Due to GitHub's 2GB file upload limit, the release ISO is split into two parts: <code>.iso.part00</code> &amp; <code>.iso.part01</code>. Merge them with one command:</p>
+                        <div class="split-guide-title">🚀 Fast &amp; Simple USB Flashing:</div>
+                        <p class="split-guide-desc">The ISO is provided as a single 1.95 GB file ready for USB flashing with Ventoy, Rufus, or <code>dd</code>:</p>
                         <div class="cli-box split-cli">
                             <span class="cli-comment"># macOS / Linux terminal:</span>
-                            <code>cat twilight-os-*.iso.part* &gt; twilight-os-2026.10.18-x86_64.iso</code>
-                        </div>
-                        <div class="cli-box split-cli">
-                            <span class="cli-comment"># Windows Command Prompt (cmd):</span>
-                            <code>copy /b twilight-os-*.iso.part00 + twilight-os-*.iso.part01 twilight-os-2026.10.18-x86_64.iso</code>
+                            <code>sudo dd bs=4M if=twilight-os-*.iso of=/dev/sdX status=progress oflag=sync</code>
                         </div>
                     </div>
                 </div>

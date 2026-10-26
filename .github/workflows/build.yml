@@ -124,4 +124,4 @@ jobs:
             - **Live User**: `liveuser` (passwordless sudo enabled)
             - **Artwork**: 5K Twilight Horizon by xyproto (CC0 1.0 Universal)
           files: out/*.iso
-          prerelease: true
+          prerelease: false

@@ -30,7 +30,9 @@ from PyQt6.QtWidgets import (
     QLineEdit, QComboBox, QMessageBox, QProgressBar, QScrollArea, QFrame,
     QTextEdit
 )
+# pyrefly: ignore[missing-import]
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+# pyrefly: ignore[missing-import]
 from PyQt6.QtGui import QFont
 
 
