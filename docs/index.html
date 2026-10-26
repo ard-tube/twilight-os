@@ -247,20 +247,20 @@
                 <!-- macOS Card -->
                 <div class="vm-card">
                     <div class="vm-card-header">
-                        <span class="vm-badge">macOS</span>
-                        <h3>UTM & VMware Fusion</h3>
+                        <span class="vm-badge">Apple Silicon (M1/M2/M3/M4) &amp; Intel</span>
+                        <h3>UTM, VMware Fusion &amp; VirtualBox</h3>
                     </div>
-                    <p class="vm-desc">Optimized for both modern Apple Silicon (M1/M2/M3/M4) and Intel Macs.</p>
+                    <p class="vm-desc">Native ARM64 build for Apple Silicon Macs — buttery-smooth near-bare-metal performance.</p>
                     <ul class="vm-specs">
-                        <li><strong>Apple Silicon Macs:</strong> Use <strong>UTM</strong> (free) in <em>Emulate</em> mode (x86_64)</li>
-                        <li><strong>Intel Macs:</strong> Use <strong>VirtualBox</strong> or <strong>VMware Fusion</strong></li>
+                        <li><strong>Apple Silicon (M-Series):</strong> Use <strong>UTM</strong> or <strong>VMware Fusion</strong> in <em>Virtualize</em> mode (ARM64)</li>
+                        <li><strong>Intel Macs:</strong> Use <strong>VirtualBox</strong> or <strong>VMware Fusion</strong> (x86_64)</li>
                         <li><strong>Memory:</strong> 4096 MB (4 GB RAM allocated)</li>
-                        <li><strong>Cores:</strong> 4 vCPU cores for smooth emulation</li>
-                        <li><strong>Display:</strong> VirtIO-GPU or OpenGL 3D enabled</li>
-                        <li><strong>Boot ISO:</strong> Select the downloaded <code>twilight-os-*.iso</code> as CD/DVD drive</li>
+                        <li><strong>Cores:</strong> 2 to 4 vCPU cores (full native hypervisor speed)</li>
+                        <li><strong>Display:</strong> VirtIO-GPU or VMware SVGA (Wayland accelerated)</li>
+                        <li><strong>Formats:</strong> Bootable UEFI ISO (<code>twilight-os-*-aarch64.iso</code>) or 1-click UTM disk (<code>.qcow2</code>)</li>
                     </ul>
                     <div class="vm-tip">
-                        🍎 <strong>Tip:</strong> On Apple Silicon Macs, download <a href="https://mac.getutm.app/" target="_blank" rel="noopener">UTM</a>, click "+ Create VM", choose "Emulate", select Linux, and attach the ISO.
+                        🍎 <strong>Apple Silicon Tip:</strong> In <a href="https://mac.getutm.app/" target="_blank" rel="noopener">UTM</a>, click "+ Create VM", select <strong>Virtualize</strong> → <strong>Linux</strong>, and attach the ARM64 ISO or import the QCOW2 image.
                     </div>
                 </div>
             </div>
@@ -277,7 +277,7 @@
                 <div class="download-box-single">
                     <div class="download-badge-row">
                         <span class="version-badge">v1.0 Stable</span>
-                        <span class="arch-badge">x86_64 Single Live ISO (1.95 GB)</span>
+                        <span class="arch-badge">x86_64 &amp; ARM64 (Apple Silicon) • Single ISOs (&lt; 2 GB)</span>
                         <span class="status-pill-success">✓ Official Stable Release</span>
                     </div>
                     <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary btn-large">

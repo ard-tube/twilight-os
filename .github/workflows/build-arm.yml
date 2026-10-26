@@ -1,0 +1,72 @@
+name: Build Twilight OS ARM64 (Apple Silicon / UTM / VMware)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-utils \
+            dosfstools \
+            e2fsprogs \
+            parted \
+            squashfs-tools \
+            xorriso \
+            mtools \
+            libarchive-tools \
+            curl \
+            wget \
+            tar \
+            grub-common \
+            grub-efi-arm64-bin
+
+      - name: Build ARM64 ISO and UTM Virtual Disk
+        run: |
+          sudo ./scripts/build-arm64.sh
+
+      - name: Verify image sizes
+        run: |
+          for f in out/*aarch64* out/*arm64*; do
+            if [ -f "$f" ]; then
+              sz=$(stat -c%s "$f")
+              mb=$((sz / 1024 / 1024))
+              echo "Artifact: $f ($mb MB)"
+              if [ "$sz" -ge 2140000000 ]; then
+                echo "::error::$f exceeds 2 GB limit ($mb MB)"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Upload ARM64 ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: twilight-os-arm64-iso
+          path: out/*aarch64.iso
+
+      - name: Upload ARM64 UTM Virtual Disk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: twilight-os-arm64-qcow2
+          path: out/*arm64.qcow2
+
+      - name: Publish ARM64 Assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            out/*aarch64.iso
+            out/*arm64.qcow2
