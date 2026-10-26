@@ -41,7 +41,7 @@ EFI_IMG="$WORK_DIR/efi.img"
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
 unmount_chroot() {
-    for m in "$ROOTFS/run" "$ROOTFS/dev/pts" "$ROOTFS/dev" "$ROOTFS/sys" "$ROOTFS/proc"; do
+    for m in "$ROOTFS/run" "$ROOTFS/dev/pts" "$ROOTFS/dev/shm" "$ROOTFS/dev" "$ROOTFS/sys" "$ROOTFS/proc"; do
         if mountpoint -q "$m" 2>/dev/null; then
             umount -R "$m" 2>/dev/null || umount -l "$m" 2>/dev/null || true
         fi
@@ -69,6 +69,7 @@ mount_chroot() {
     mountpoint -q "$ROOTFS/sys" || mount -t sysfs /sys "$ROOTFS/sys"
     mountpoint -q "$ROOTFS/dev" || mount --bind /dev "$ROOTFS/dev"
     mountpoint -q "$ROOTFS/dev/pts" || mount --bind /dev/pts "$ROOTFS/dev/pts"
+    mountpoint -q "$ROOTFS/dev/shm" || mount -t tmpfs tmpfs "$ROOTFS/dev/shm" 2>/dev/null || true
     mountpoint -q "$ROOTFS/run" || mount --bind /run "$ROOTFS/run"
 
     # Ensure /dev/fd and standard I/O symlinks exist for bash process substitution
@@ -128,6 +129,9 @@ Server = http://mirror.archlinuxarm.org/aarch64/$repo
 Server = http://fl.us.mirror.archlinuxarm.org/aarch64/$repo
 Server = http://nj.us.mirror.archlinuxarm.org/aarch64/$repo
 EOF
+
+# Disable CheckSpace because statvfs inside chroot fails to determine cachedir mount point
+sed -i 's/^[[:space:]]*CheckSpace/#CheckSpace/' "$ROOTFS/etc/pacman.conf" 2>/dev/null || true
 
 # Temporarily relax SigLevel during initial bootstrap
 sed -i 's/^SigLevel.*/SigLevel = Never/' "$ROOTFS/etc/pacman.conf" 2>/dev/null || true
