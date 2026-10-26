@@ -51,7 +51,7 @@ print_banner() {
     fi
     echo -e "${NC}"
     echo -e "${CYAN}Welcome to the Twilight OS Terminal Setup Assistant!${NC}"
-    echo -e "${BLUE}KDE Plasma 6 • Wayland • Rolling Release${NC}"
+    echo -e "${BLUE}v1.2 • KDE Plasma 6 • Wayland • Rolling Release${NC}"
     echo "────────────────────────────────────────────────────────────"
 }
 

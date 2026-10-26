@@ -141,9 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (latestRelease.tag_name.startsWith("v1")) {
                         releaseTagEl.innerText = `${latestRelease.tag_name} (Stable)`;
                         if (isoSizeEl && latestRelease.assets && latestRelease.assets.length > 0) {
-                            const totalBytes = latestRelease.assets.reduce((sum, a) => sum + (a.size || 0), 0);
-                            const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-                            isoSizeEl.innerText = `${totalGB} GB (Single ISO)`;
+                            const isoAsset = latestRelease.assets.find(a => (a.name || '').endsWith('.iso')) || latestRelease.assets[0];
+                            const isoGB = ((isoAsset.size || 0) / (1024 * 1024 * 1024)).toFixed(2);
+                            isoSizeEl.innerText = `${isoGB} GB (Single ISO < 2 GB)`;
                         }
                     }
                 }

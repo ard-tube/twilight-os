@@ -40,9 +40,9 @@ from PyQt6.QtGui import QFont
 # Constants
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "0.2.0"
+VERSION = "1.2.0"
 INSTALL_CONF = "/tmp/twilight-install.conf"
-POST_INSTALL_SCRIPT = "/usr/local/bin/twilight-post-install"
+POST_INSTALL_SCRIPT = "/usr/local/bin/twilight-finalize-install"
 
 # Valid Linux username pattern
 USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
