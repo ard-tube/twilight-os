@@ -18,3 +18,21 @@ if [[ -d "$BRANDING_DIR" ]]; then
         fi
     fi
 fi
+
+# Ensure Twilight Horizon is the default system-wide wallpaper in KDE Plasma
+if [[ -d /usr/share/wallpapers/Twilight ]]; then
+    mkdir -p /usr/share/wallpapers
+    # Replace default Breeze / Next wallpaper packages with symlinks to Twilight
+    for wp in /usr/share/wallpapers/Next /usr/share/wallpapers/Breeze; do
+        rm -rf "$wp"
+        ln -sf /usr/share/wallpapers/Twilight "$wp"
+    done
+fi
+
+# Update KDE Plasma look-and-feel wallpaper defaults
+for def in /usr/share/plasma/plasmoids/org.kde.plasma.desktop/contents/defaults \
+           /usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/defaults; do
+    if [[ -f "$def" ]]; then
+        sed -i 's/^defaultWallpaperTheme=.*/defaultWallpaperTheme=Twilight/' "$def" 2>/dev/null || true
+    fi
+done

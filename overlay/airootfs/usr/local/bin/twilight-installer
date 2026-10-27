@@ -9,13 +9,28 @@ set -euo pipefail
 # Force CLI if flag is passed
 if [[ "${1:-}" == "--cli" || "${1:-}" == "-c" ]]; then
     shift
-    exec /usr/local/bin/twilight-installer-cli "$@"
+    TERMINAL=$(command -v konsole || command -v xterm || true)
+    if [[ -n "$TERMINAL" ]]; then
+        exec "$TERMINAL" -e sudo /usr/local/bin/twilight-installer-cli "$@"
+    else
+        exec sudo /usr/local/bin/twilight-installer-cli "$@"
+    fi
 fi
 
-# If graphical session is active and PyQt6 is functional, launch GUI
-if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && python3 -c "import PyQt6" >/dev/null 2>&1; then
-    # Launch GUI; if it exits with an error code, fallback to CLI
-    /usr/local/bin/twilight-installer-gui "$@" || exec /usr/local/bin/twilight-installer-cli "$@"
+# Ensure Wayland and X11 display environment is preserved
+export QT_QPA_PLATFORM="wayland;xcb"
+
+# If graphical session is active, launch GUI directly as the current user
+if [[ -n "${WAYLAND_DISPLAY:-}" || -n "${DISPLAY:-}" ]]; then
+    if /usr/local/bin/twilight-installer-gui "$@"; then
+        exit 0
+    fi
+fi
+
+# Fallback: Launch CLI in a visible terminal emulator window
+TERMINAL=$(command -v konsole || command -v xterm || true)
+if [[ -n "$TERMINAL" ]]; then
+    exec "$TERMINAL" -e sudo /usr/local/bin/twilight-installer-cli "$@"
 else
-    exec /usr/local/bin/twilight-installer-cli "$@"
+    exec sudo /usr/local/bin/twilight-installer-cli "$@"
 fi

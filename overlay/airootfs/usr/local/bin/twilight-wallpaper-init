@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Twilight OS — Desktop Wallpaper Initializer
+# Enforces Twilight Horizon wallpaper across all active KDE Plasma 6 screens.
+# ==============================================================================
+set -e
+
+WALLPAPER="/usr/share/wallpapers/Twilight/contents/images/twilight.png"
+
+[[ -f "$WALLPAPER" ]] || exit 0
+
+# Wait for KDE Plasma Shell to be ready on DBus
+for i in {1..30}; do
+    if pgrep -x plasmashell >/dev/null 2>&1; then
+        sleep 1
+        if command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then
+            plasma-apply-wallpaperimage "$WALLPAPER" >/dev/null 2>&1 && exit 0
+        fi
+    fi
+    sleep 1
+done

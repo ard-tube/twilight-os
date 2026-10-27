@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Twilight Wallpaper Initializer
+Comment=Applies the Twilight Horizon wallpaper to all KDE Plasma screens
+Exec=/usr/local/bin/twilight-wallpaper-init
+Hidden=false
+NoDisplay=true
+X-KDE-autostart-phase=2

@@ -1,0 +1,13 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "info@twilightos.org",
+                "Name": "xyproto"
+            }
+        ],
+        "Id": "Twilight",
+        "License": "CC0-1.0",
+        "Name": "Twilight Horizon"
+    }
+}

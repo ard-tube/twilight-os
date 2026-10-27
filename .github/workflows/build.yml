@@ -72,7 +72,7 @@ jobs:
           chmod +x profile/airootfs/home/liveuser/Desktop/*.desktop 2>/dev/null || true
 
           # 9. Register permissions in profiledef.sh
-          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"\n  ["/usr/local/bin/twilight-finalize-install"]="0:0:755"\n  ["/usr/local/bin/apply-twilight-branding"]="0:0:755"\n  ["/root/customize_airootfs.sh"]="0:0:755"' profile/profiledef.sh
+          sed -i '/^file_permissions=(/a\  ["/etc/sudoers.d/liveuser"]="0:0:0440"\n  ["/home/liveuser"]="1000:1000:750"\n  ["/usr/local/bin/twilight-installer"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-gui"]="0:0:755"\n  ["/usr/local/bin/twilight-installer-cli"]="0:0:755"\n  ["/usr/local/bin/twilight-finalize-install"]="0:0:755"\n  ["/usr/local/bin/twilight-wallpaper-init"]="0:0:755"\n  ["/usr/local/bin/apply-twilight-branding"]="0:0:755"\n  ["/root/customize_airootfs.sh"]="0:0:755"' profile/profiledef.sh
 
           # 10. Services: SDDM & NetworkManager
           mkdir -p profile/airootfs/etc/systemd/system/multi-user.target.wants

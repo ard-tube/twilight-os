@@ -1294,7 +1294,7 @@ class InstallerWindow(QMainWindow):
                 "echo '║           🌌 Twilight OS Guided Installation               ║'; "
                 "echo '╚════════════════════════════════════════════════════════════╝'; echo ''; "
                 "echo 'Step 1/2: Running Arch Linux guided installer (archinstall)...'; echo ''; "
-                "archinstall; "
+                "sudo archinstall; "
                 "echo ''; echo 'Step 2/2: Finalizing Twilight OS customizations...'; "
                 f"if [ -x {finalize_bin} ]; then "
                 f"  sudo {finalize_bin} '{target_disk}'; "
@@ -1332,17 +1332,6 @@ class InstallerWindow(QMainWindow):
 # ──────────────────────────────────────────────────────────────────────────────
 
 def main():
-    # Check if we're running as root (needed for installation)
-    if os.geteuid() != 0:
-        # Try to re-launch with sudo
-        print("Twilight OS Setup Assistant requires root privileges.")
-        print("Attempting to re-launch with sudo...")
-        try:
-            os.execvp("sudo", ["sudo", sys.executable] + sys.argv)
-        except Exception:
-            print("Failed to elevate privileges. Please run with: sudo twilight-installer-gui")
-            sys.exit(1)
-
     app = QApplication(sys.argv)
     app.setApplicationName("Twilight OS Setup Assistant")
     app.setApplicationVersion(VERSION)

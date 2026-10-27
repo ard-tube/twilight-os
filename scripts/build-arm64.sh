@@ -243,6 +243,7 @@ if [[ -d "$ROOTFS/etc/skel" ]]; then
     mkdir -p "$ROOTFS/home/liveuser"
     cp -r "$ROOTFS"/etc/skel/. "$ROOTFS/home/liveuser/"
     run_in_chroot chown -R 1000:1000 /home/liveuser 2>/dev/null || true
+    chmod +x "$ROOTFS"/home/liveuser/Desktop/*.desktop 2>/dev/null || true
 fi
 
 # Enable systemd services
