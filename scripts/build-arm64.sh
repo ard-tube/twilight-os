@@ -217,8 +217,12 @@ fi
 
 # Live user setup (liveuser with passwordless sudo)
 log_info "Configuring liveuser account and autologin..."
-run_in_chroot useradd -m -u 1000 -g 1000 -G wheel,audio,video,storage,network,input,power -s /bin/bash liveuser 2>/dev/null || true
-passwd -d -u liveuser "$ROOTFS" 2>/dev/null || true
+run_in_chroot groupadd -g 1000 liveuser 2>/dev/null || true
+run_in_chroot useradd -m -u 1000 -g 1000 -s /bin/bash liveuser 2>/dev/null || true
+for grp in wheel audio video storage network input power; do
+    run_in_chroot usermod -aG "$grp" liveuser 2>/dev/null || true
+done
+run_in_chroot passwd -d liveuser 2>/dev/null || true
 
 # Sudoers
 mkdir -p "$ROOTFS/etc/sudoers.d"
@@ -236,8 +240,9 @@ EOF
 
 # Copy skel configs to liveuser home
 if [[ -d "$ROOTFS/etc/skel" ]]; then
+    mkdir -p "$ROOTFS/home/liveuser"
     cp -r "$ROOTFS"/etc/skel/. "$ROOTFS/home/liveuser/"
-    run_in_chroot chown -R liveuser:liveuser /home/liveuser
+    run_in_chroot chown -R 1000:1000 /home/liveuser 2>/dev/null || true
 fi
 
 # Enable systemd services
