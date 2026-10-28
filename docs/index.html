@@ -93,7 +93,7 @@
             </p>
 
             <div class="hero-buttons">
-                <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary" id="heroDownloadBtn">
+                <a href="#download" class="btn btn-primary" id="heroDownloadBtn">
                     <span class="btn-icon">⬇</span>
                     <span>Download Twilight OS v1.2</span>
                 </a>
@@ -271,34 +271,67 @@
     <section class="download-section" id="download">
         <div class="container">
             <div class="download-card">
-                <h2>Get Twilight OS Today</h2>
-                <p>Download the latest official ISO image and flash it to a USB drive using Ventoy, Rufus, or <code>dd</code>.</p>
+                <h2>Get Twilight OS v1.2</h2>
+                <p>Choose your hardware architecture below. All downloads are official, single-file images under 2 GB — no multi-part splitting needed.</p>
                 
-                <div class="download-box-single">
-                    <div class="download-badge-row">
-                        <span class="version-badge">v1.2 Stable</span>
-                        <span class="arch-badge">x86_64 &amp; ARM64 (Apple Silicon) • Single ISOs (&lt; 2 GB)</span>
-                        <span class="status-pill-success">✓ Official Stable Release</span>
+                <div class="download-grid">
+                    <!-- PC Edition (x86) -->
+                    <div class="download-box">
+                        <div class="download-badge-row">
+                            <span class="version-badge">v1.2 Stable</span>
+                            <span class="arch-badge">x86_64 PC</span>
+                        </div>
+                        <div class="download-box-header">
+                            <h3>🖥️ PC Edition (x86)</h3>
+                        </div>
+                        <p class="download-box-desc">Official bootable live ISO for standard Intel &amp; AMD 64-bit PCs, laptops, and custom builds.</p>
+                        <ul class="download-box-meta">
+                            <li>📦 <strong>File:</strong> <code>twilight-os-v1.2-x86.iso</code></li>
+                            <li>⚡ <strong>Size:</strong> 1.91 GB (Single ISO &lt; 2 GB)</li>
+                            <li>🌌 <strong>Desktop:</strong> KDE Plasma 6 Wayland + Mesa GPU</li>
+                            <li>🛠️ <strong>Installers:</strong> Dual Guided Qt6 GUI + Terminal CLI</li>
+                        </ul>
+                        <div class="download-box-actions">
+                            <a href="https://github.com/ard-tube/twilight-os/releases/download/v1.2/twilight-os-v1.2-x86.iso" class="btn-download-primary">
+                                <span>⬇ Download x86 ISO (1.91 GB)</span>
+                            </a>
+                        </div>
                     </div>
-                    <a href="https://github.com/ard-tube/twilight-os/releases" class="btn btn-primary btn-large">
-                        <span class="btn-icon">⬇</span>
-                        <span>Download Twilight OS v1.2 (Single ISO)</span>
-                    </a>
-                    <p class="download-subtext">Official bootable single-file ISO from GitHub Releases. Under 2 GB — no multi-part splitting or reassembly needed.</p>
 
-                    <div class="split-guide">
-                        <div class="split-guide-title">🚀 Fast &amp; Simple USB Flashing:</div>
-                        <p class="split-guide-desc">The ISO is provided as a single 1.95 GB file ready for USB flashing with Ventoy, Rufus, or <code>dd</code>:</p>
-                        <div class="cli-box split-cli">
-                            <span class="cli-comment"># macOS / Linux terminal:</span>
-                            <code>sudo dd bs=4M if=twilight-os-*.iso of=/dev/sdX status=progress oflag=sync</code>
+                    <!-- Apple Silicon & ARM Edition (arm) -->
+                    <div class="download-box">
+                        <div class="download-badge-row">
+                            <span class="version-badge">v1.2 Stable</span>
+                            <span class="arch-badge">ARM64 (Apple Silicon)</span>
+                        </div>
+                        <div class="download-box-header">
+                            <h3>🍏 Apple Silicon Edition (arm)</h3>
+                        </div>
+                        <p class="download-box-desc">Native ARM64 release tuned for Apple Silicon Macs (M1/M2/M3/M4) in UTM, VMware Fusion, and VirtualBox.</p>
+                        <ul class="download-box-meta">
+                            <li>💿 <strong>Live ISO:</strong> <code>twilight-os-v1.2-arm.iso</code> (1.23 GB)</li>
+                            <li>💾 <strong>VM Disk:</strong> <code>twilight-os-v1.2-arm.qcow2</code> (1.62 GB)</li>
+                            <li>⚡ <strong>Performance:</strong> Near bare-metal hypervisor speed</li>
+                            <li>🚀 <strong>Easy Start:</strong> 1-click import into UTM or boot ISO</li>
+                        </ul>
+                        <div class="download-box-actions">
+                            <a href="https://github.com/ard-tube/twilight-os/releases/download/v1.2/twilight-os-v1.2-arm.iso" class="btn-download-primary">
+                                <span>⬇ Download ARM ISO (1.23 GB)</span>
+                            </a>
+                            <a href="https://github.com/ard-tube/twilight-os/releases/download/v1.2/twilight-os-v1.2-arm.qcow2" class="btn-download-secondary">
+                                <span>💾 Download UTM Disk (.qcow2 - 1.62 GB)</span>
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <div class="cli-box">
-                    <span class="cli-comment"># Flash to USB via terminal</span>
-                    <code>sudo dd bs=4M if=twilight-os-*.iso of=/dev/sdX status=progress oflag=sync</code>
+                <div class="split-guide" style="max-width: 960px; margin: 0 auto;">
+                    <div class="split-guide-title">🚀 Fast &amp; Simple USB Flashing (PC / x86):</div>
+                    <p class="split-guide-desc">Flash the single ISO directly to a USB drive using Ventoy, Rufus, or <code>dd</code>:</p>
+                    <div class="cli-box split-cli">
+                        <span class="cli-comment"># Linux / macOS terminal:</span>
+                        <code>sudo dd bs=4M if=twilight-os-v1.2-x86.iso of=/dev/sdX status=progress oflag=sync</code>
+                    </div>
                 </div>
             </div>
         </div>

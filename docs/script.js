@@ -140,10 +140,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (releaseTagEl && latestRelease.tag_name) {
                     if (latestRelease.tag_name.startsWith("v1")) {
                         releaseTagEl.innerText = `${latestRelease.tag_name} (Stable)`;
-                        if (isoSizeEl && latestRelease.assets && latestRelease.assets.length > 0) {
-                            const isoAsset = latestRelease.assets.find(a => (a.name || '').endsWith('.iso')) || latestRelease.assets[0];
-                            const isoGB = ((isoAsset.size || 0) / (1024 * 1024 * 1024)).toFixed(2);
-                            isoSizeEl.innerText = `${isoGB} GB (Single ISO < 2 GB)`;
+                        if (latestRelease.assets && latestRelease.assets.length > 0) {
+                            const x86Asset = latestRelease.assets.find(a => (a.name || '').includes('x86'));
+                            const armIsoAsset = latestRelease.assets.find(a => (a.name || '').includes('arm') && (a.name || '').endsWith('.iso'));
+                            const armQcowAsset = latestRelease.assets.find(a => (a.name || '').endsWith('.qcow2'));
+
+                            if (isoSizeEl && x86Asset) {
+                                const isoGB = ((x86Asset.size || 0) / (1024 * 1024 * 1024)).toFixed(2);
+                                isoSizeEl.innerText = `${isoGB} GB (x86 ISO)`;
+                            }
+
+                            // Update download button URLs if available
+                            const x86Btn = document.querySelector('a[href*="x86.iso"]');
+                            if (x86Btn && x86Asset && x86Asset.browser_download_url) {
+                                x86Btn.href = x86Asset.browser_download_url;
+                            }
+                            const armIsoBtn = document.querySelector('a[href*="arm.iso"]');
+                            if (armIsoBtn && armIsoAsset && armIsoAsset.browser_download_url) {
+                                armIsoBtn.href = armIsoAsset.browser_download_url;
+                            }
+                            const armQcowBtn = document.querySelector('a[href*="arm.qcow2"]');
+                            if (armQcowBtn && armQcowAsset && armQcowAsset.browser_download_url) {
+                                armQcowBtn.href = armQcowAsset.browser_download_url;
+                            }
                         }
                     }
                 }

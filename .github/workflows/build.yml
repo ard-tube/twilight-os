@@ -85,12 +85,17 @@ jobs:
           pacman -Scc --noconfirm || true
           mkarchiso -v -r -w /tmp/archiso-work -o out profile
 
-      - name: Verify ISO size
+      - name: Verify ISO size and standardize filename
         run: |
-          ISO_FILE=$(ls -1 out/*.iso | head -n 1)
+          RAW_ISO=$(ls -1 out/*.iso | head -n 1)
+          TARGET_ISO="out/twilight-os-${{ github.ref_name || 'v1.2' }}-x86.iso"
+          if [ "$RAW_ISO" != "$TARGET_ISO" ]; then
+            mv "$RAW_ISO" "$TARGET_ISO"
+          fi
+          ISO_FILE="$TARGET_ISO"
           ISO_SIZE=$(stat -c%s "$ISO_FILE")
           ISO_SIZE_MB=$((ISO_SIZE / 1024 / 1024))
-          echo "ISO file: $ISO_FILE"
+          echo "Standardized ISO file: $ISO_FILE"
           echo "ISO size: ${ISO_SIZE_MB} MB ($ISO_SIZE bytes)"
           if [ "$ISO_SIZE" -ge 2140000000 ]; then
             echo "::error::ISO exceeds 2 GB limit (${ISO_SIZE_MB} MB). Reduce packages in overlay/packages.extra."

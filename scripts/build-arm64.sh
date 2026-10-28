@@ -322,7 +322,7 @@ mkfs.vfat -F32 "$EFI_IMG"
 mcopy -s -i "$EFI_IMG" "$ISO_DIR/EFI" ::/
 
 # Generate ISO with xorriso using proper appended partition syntax
-ISO_FILE="$OUT_DIR/twilight-os-v1.2-aarch64.iso"
+ISO_FILE="$OUT_DIR/twilight-os-v1.2-arm.iso"
 log_info "Creating ISO image: $ISO_FILE..."
 xorriso -as mkisofs \
     -iso-level 3 \
