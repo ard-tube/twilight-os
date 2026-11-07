@@ -39,7 +39,7 @@ jobs:
 
       - name: Verify image sizes
         run: |
-          for f in out/*arm.iso out/*arm.qcow2; do
+          for f in out/*arm.iso out/*arm*.qcow2; do
             if [ -f "$f" ]; then
               sz=$(stat -c%s "$f")
               mb=$((sz / 1024 / 1024))
@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: twilight-os-arm-qcow2
-          path: out/*arm.qcow2
+          path: out/*arm*.qcow2
 
       - name: Publish ARM64 Assets to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -70,4 +70,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: |
             out/*arm.iso
-            out/*arm.qcow2
+            out/*arm*.qcow2

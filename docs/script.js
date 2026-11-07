@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("https://api.github.com/repos/ard-tube/twilight-os/actions/workflows/build.yml/runs?per_page=1")
         .then(res => res.json())
         .then(data => {
-            if (data.workflow_runs && data.workflow_runs.length > 0) {
+            if (data && Array.isArray(data.workflow_runs) && data.workflow_runs.length > 0) {
                 const latestRun = data.workflow_runs[0];
                 if (ciStatusEl) {
                     if (latestRun.status === "in_progress" || latestRun.status === "queued") {
@@ -183,6 +183,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     } else if (latestRun.conclusion === "success") {
                         ciStatusEl.innerText = "✓ Passing (ISO Ready)";
                         ciStatusEl.style.color = "#a6e3a1";
+                    } else if (latestRun.conclusion === "failure") {
+                        ciStatusEl.innerText = "✗ Build Failed";
+                        ciStatusEl.style.color = "#f38ba8";
                     }
                 }
             }

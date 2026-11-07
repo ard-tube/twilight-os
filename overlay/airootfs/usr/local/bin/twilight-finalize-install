@@ -256,9 +256,14 @@ if [[ ${#PKGS[@]} -gt 0 ]]; then
 
     # Refresh repos and install packages in target chroot
     if arch-chroot "$TARGET" pacman -Sy --noconfirm; then
-        arch-chroot "$TARGET" pacman -S --noconfirm --needed "${PKGS[@]}" || {
-            log_warn "Some packages may have failed to install. Continuing..."
-        }
+        if ! arch-chroot "$TARGET" pacman -S --noconfirm --needed "${PKGS[@]}"; then
+            log_warn "Batch install failed. Retrying package by package..."
+            for pkg in "${PKGS[@]}"; do
+                arch-chroot "$TARGET" pacman -S --noconfirm --needed "$pkg" 2>/dev/null || {
+                    log_warn "Could not install $pkg. Skipping..."
+                }
+            done
+        fi
     else
         log_warn "Target network/pacman refresh failed. Packages can be installed after reboot."
     fi

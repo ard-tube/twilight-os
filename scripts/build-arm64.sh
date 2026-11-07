@@ -417,9 +417,10 @@ losetup -d "$LOOP"
 LOOP=""
 
 # Convert to compressed QCOW2 for UTM & VMware
-QCOW2_FILE="$OUT_DIR/twilight-os-v1.2-arm64.qcow2"
+QCOW2_FILE="$OUT_DIR/twilight-os-v1.2-arm.qcow2"
 log_info "Compressing disk image into QCOW2 format..."
 qemu-img convert -c -f raw -O qcow2 "$RAW_DISK" "$QCOW2_FILE"
+cp -f "$QCOW2_FILE" "$OUT_DIR/twilight-os-v1.2-arm64.qcow2" 2>/dev/null || true
 log_success "Created UTM QCOW2 disk image: $QCOW2_FILE"
 
 # ──────────────────────────────────────────────────────────────────────────────
