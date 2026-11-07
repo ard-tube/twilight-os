@@ -118,8 +118,8 @@ You can run Twilight OS inside a virtual machine without touching your physical 
 5. **Attach ISO**: Mount `twilight-os-*.iso` in the Storage Optical Drive and start!
 
 ### 🍎 macOS (Apple Silicon & Intel Macs)
-- **Apple Silicon (M1 / M2 / M3 / M4)**: Download free [UTM](https://mac.getutm.app/). Click **+**, select **Emulate**, choose **Linux**, allocate 4 GB RAM + 4 CPU cores, and attach the ISO.
-- **Intel Macs**: Use **VirtualBox** or **VMware Fusion** with EFI enabled and 3D Acceleration as described above.
+- **Apple Silicon (M1 / M2 / M3 / M4)**: Download free [UTM](https://mac.getutm.app/). Click **+**, select **Virtualize**, choose **Linux**, allocate 4 GB RAM + 4 CPU cores, and attach `twilight-os-v1.2-arm.iso` (or import the pre-configured `.qcow2` virtual disk) for native hypervisor speed.
+- **Intel Macs**: Use **VirtualBox** or **VMware Fusion** with `twilight-os-v1.2-x86.iso`, EFI enabled and 3D Acceleration as described above.
 
 ---
 
